@@ -27,7 +27,15 @@
 
 = Literature Survey
 
-#lorem(80)
+Using low-rank modifications, B Wei et al show the brittleness of LLM safety
+alignment. They find that the isolated safety-critical ranks of LLama2-chat
+model corresponding to safety alignment are 2.5% of the total ranks. They
+identify and isolate these regions by testing how the model changes after the
+removal of ranks of the weight matrices. They propose the method ActSVD, which
+performs SVD on $W X_"in"$. They store response activations before the layer $W$
+into $X_"in" = [X_1, ..., X_n] in RR^(d_"in" times n)$. They find a low-rank
+matrix $hat(W)$ where the Frobenius norm of the change to the output is
+minimized: $ hat(W) = limits(arg min)_("rank" hat(W) <= r) norm(W X_"in" - hat(W) X_"in")^2_"F" $
 
 = Methodology
 
