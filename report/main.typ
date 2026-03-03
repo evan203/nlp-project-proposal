@@ -27,7 +27,7 @@
 
 = Literature Survey
 
-Wollschlager et al. find refusal in LLMs to be based on a conic region of multiple basis refusal vectors rather than one refusal direction. Their methods of Refusal Direction Optimization (RDO) for one vector and Refusal Cone Optimization (RCO) for multiple vectors perform gradient descent to converge on bases for refusal direction(s). Their results show refusal performance gains up to a four-dimensional conic region representing refusal on the Gemma-2 model.
+Wollschlager et al. find refusal in LLMs to be based on a conic region of multiple basis refusal vectors rather than one refusal direction. Their methods of Refusal Direction Optimization (RDO) for one vector and Refusal Cone Optimization (RCO) for multiple vectors perform gradient descent to converge on bases for refusal direction(s). Their results show refusal performance gains up to a four-dimensional conic region representing refusal on the Gemma-2 model. 
 
 = Methodology
 
@@ -46,5 +46,5 @@ Wollschlager et al. find refusal in LLMs to be based on a conic region of multip
 #lorem(80)
 
 // Uncomment this to include your bibliography:
-// #add-bib-resource(read("custom.bib"))
+// #add-bib-resource(read("bibliography.bib"))
 // #print-acl-bibliography()
