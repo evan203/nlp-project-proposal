@@ -27,15 +27,26 @@
 
 = Literature Survey
 
-Using low-rank modifications, B Wei et al show the brittleness of LLM safety
-alignment. They find that the isolated safety-critical ranks of LLama2-chat
-model corresponding to safety alignment are 2.5% of the total ranks. They
-identify and isolate these regions by testing how the model changes after the
-removal of ranks of the weight matrices. They propose the method ActSVD, which
-performs SVD on $W X_"in"$. They store response activations before the layer $W$
-into $X_"in" = [X_1, ..., X_n] in RR^(d_"in" times n)$. They find a low-rank
-matrix $hat(W)$ where the Frobenius norm of the change to the output is
-minimized: $ hat(W) = limits(arg min)_("rank" hat(W) <= r) norm(W X_"in" - hat(W) X_"in")^2_"F" $
+#citet("wei2024") introduce low-rank decomposition methods designed to identify
+specific ranks within a weight matrix related to given LLM behaviors. Their
+ActSVD algorithm performs SVD on the product of the model weights and input
+activations ($W X_"in"$), and yields an orthogonal projection matrix ($Pi$).
+Removing the top safety-critical ranks ActSVD identifies causes the model to
+completely stop rejecting unsafe prompts, and the model's utility is severely
+compromised. These findings suggest that safety regions in aligned models are
+also crucial for its general utility. To disentangle safety from utility, the
+authors remove safety ranks orthogonal to utility ranks using
+$Delta W = (I - Pi^u) Pi^s W$. This yields higher attack success rate for unsafe
+prompts while maintaining zero-shot accuracy for utility prompts. The fact that
+naively ablating safety ranks destroys utility, whereas surgically removing
+disentangled ranks preserves it, indicates that top safety ranks and top utility
+ranks heavily overlap. The necessity of this orthogonal projection matrix
+provides strong evidence against the hypothesis of strict linear separability
+between safety and utility. Ultimately, ActSVD provides rank-level evidence for
+superposition: safety and utility share representational capacity and are not
+linearly distinct.
+
+
 
 = Methodology
 
@@ -53,6 +64,5 @@ minimized: $ hat(W) = limits(arg min)_("rank" hat(W) <= r) norm(W X_"in" - hat(W
 
 #lorem(80)
 
-// Uncomment this to include your bibliography:
-// #add-bib-resource(read("custom.bib"))
-// #print-acl-bibliography()
+#add-bib-resource(read("bibliography.bib"))
+#print-acl-bibliography()
