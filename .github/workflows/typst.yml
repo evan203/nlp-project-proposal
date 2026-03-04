@@ -51,3 +51,21 @@ jobs:
           keep_files: true  # CRITICAL: Don't wipe other branches' folders
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Create Commit Status report
+        uses: siblingsit/commit-status-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          state: success
+          context: "PDF / Report"
+          description: "Click details to view PDF"
+          target_url: "https://evan203.github.io/nlp-project-proposal/${{ github.ref_name }}/report.pdf"
+
+      - name: Create Commit Status notes
+        uses: siblingsit/commit-status-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          state: success
+          context: "PDF / Slides "
+          description: "Click details to view PDF"
+          target_url: "https://evan203.github.io/nlp-project-proposal/${{ github.ref_name }}/slides.pdf"
