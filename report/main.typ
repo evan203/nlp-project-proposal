@@ -44,7 +44,26 @@
 
 = Literature Survey
 
-#lorem(80)
+#citet("Wei2024Brittleness") introduce low-rank decomposition methods designed to identify
+specific ranks within a weight matrix related to given LLM behaviors. Their
+ActSVD algorithm performs Singular Value Decomposition on the product of the model weights and input
+activations ($W X_"in"$), and yields an orthogonal projection matrix ($Pi$).
+Removing the top safety-critical ranks ActSVD identifies causes the model to
+completely stop rejecting unsafe prompts, and the model's utility is severely
+compromised. These findings suggest that safety regions in aligned models are
+also crucial for its general utility. To disentangle safety from utility, the
+authors remove safety ranks orthogonal to utility ranks using
+$Delta W = (I - Pi^u) Pi^s W$. This yields higher attack success rate for unsafe
+prompts while maintaining zero-shot accuracy for utility prompts. The fact that
+naively ablating safety ranks destroys utility, whereas surgically removing
+disentangled ranks preserves it, indicates that top safety ranks and top utility
+ranks heavily overlap. The necessity of this orthogonal projection matrix
+provides strong evidence against the hypothesis of strict linear separability
+between safety and utility. Ultimately, ActSVD provides rank-level evidence for
+superposition: safety and utility share representational capacity and are not
+linearly distinct.
+
+
 
 = Methodology
 
@@ -62,6 +81,5 @@
 
 #lorem(80)
 
-// Uncomment this to include your bibliography:
-// #add-bib-resource(read("custom.bib"))
-// #print-acl-bibliography()
+#add-bib-resource(read("bibliography.bib"))
+#print-acl-bibliography()
