@@ -33,15 +33,10 @@ jobs:
           typst compile report/main.typ output/report.pdf
           typst compile slides/main.typ output/slides.pdf
 
-      - name: Determine Deploy Path
+      - name: Set Deploy Path
         id: path
         run: |
-          # Logic: If main, deploy to root (.). Otherwise, deploy to folder matching branch name.
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "dest_dir=." >> $GITHUB_OUTPUT
-          else
-            echo "dest_dir=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          fi
+          echo "dest_dir=${{ github.ref_name }}" >> $GITHUB_OUTPUT
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
