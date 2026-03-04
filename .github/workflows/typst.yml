@@ -27,7 +27,7 @@ jobs:
       - name: Setup Typst
         uses: typst-community/setup-typst@v4
         with:
-          cache-dependency-path: "**/*.typ"
+          cache-dependency-path: "*/*.typ"
 
       - name: Install Fonts
         run: |
@@ -62,7 +62,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           state: success
           context: "PDF / Report"
-          description: "Click details to view PDF"
+          description: "Click details to view report.pdf ⟶"
           target_url: "https://evan203.github.io/nlp-project-proposal/${{ github.ref_name }}/report.pdf"
 
       - name: Create Commit Status notes
@@ -71,5 +71,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           state: success
           context: "PDF / Slides "
-          description: "Click details to view PDF"
+          description: "Click details to view slides.pdf ⟶"
           target_url: "https://evan203.github.io/nlp-project-proposal/${{ github.ref_name }}/slides.pdf"
