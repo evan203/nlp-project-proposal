@@ -3,6 +3,9 @@ name: Compile Typst Documents to GitHub Pages
 on:
   push:
     branches: ["**"]  # Trigger on ALL branches
+    paths:
+      - "**.typ"
+      - ".github/workflows/typst.yml"
   workflow_dispatch:
 
 permissions:
