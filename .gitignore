@@ -1,0 +1,2 @@
+# tracking pdf files brings merge conflicts and inflates git tree
+*.pdf
