@@ -29,7 +29,7 @@
 
 #citet("Wei2024Brittleness") introduce low-rank decomposition methods designed to identify
 specific ranks within a weight matrix related to given LLM behaviors. Their
-ActSVD algorithm performs SVD on the product of the model weights and input
+ActSVD algorithm performs Singular Value Decomposition on the product of the model weights and input
 activations ($W X_"in"$), and yields an orthogonal projection matrix ($Pi$).
 Removing the top safety-critical ranks ActSVD identifies causes the model to
 completely stop rejecting unsafe prompts, and the model's utility is severely
