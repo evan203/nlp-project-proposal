@@ -63,6 +63,17 @@ between safety and utility. Ultimately, ActSVD provides rank-level evidence for
 superposition: safety and utility share representational capacity and are not
 linearly distinct.
 
+#citet("Ponkshe2026Safety") demonstrates fundamental mathematical limitations of linear subspace-based 
+safety defenses, arguing that safety is not linearly separable from utility. Removing 
+any specific safety-related subspace inherently degrades the overall performance of the model. 
+The authors support this hypothesis through a series of empirical evaluations. Using 
+singular value decomposition and mode subspace overlap, the study reveals that the 
+principal directions amplifying safe behaviors also amplify useful ones, indicating that 
+these directions do not constitute a distinctly separable safety subspace. Furthermore, 
+attempts to mitigate harmful behaviors via orthogonal projection resulted in a proportional 
+drop in the model's utility. The researchers also found that providing the model with helpful 
+and harmful inputs produced highly overlapping activations. Collectively, these findings further
+challenge the hypothesis that safety and utility operate within linearly separable subspaces.
 
 
 = Methodology
