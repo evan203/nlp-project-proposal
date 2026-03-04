@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typst Project Docs</title>
+    <style>
+        :root {
+            --primary: #239DAD; /* Typst Cyan */
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #2c3e50;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid #e1e4e8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+            border-color: var(--primary);
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+        }
+
+        .card-content h2 {
+            margin: 0 0 5px 0;
+            font-size: 1.2rem;
+        }
+
+        .card-content p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .badge {
+            background: var(--primary);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>📑 Project Documentation</h1>
+
+        <div class="card-grid">
+            <a href="main/report.pdf" class="card" target="_blank">
+                <div style="display:flex; align-items:center;">
+                    <div class="card-icon">📄</div>
+                    <div class="card-content">
+                        <h2>Project Report</h2>
+                        <p>Latest build from Main</p>
+                    </div>
+                </div>
+                <span class="badge">PDF</span>
+            </a>
+
+            <a href="main/slides.pdf" class="card" target="_blank">
+                <div style="display:flex; align-items:center;">
+                    <div class="card-icon">📊</div>
+                    <div class="card-content">
+                        <h2>Presentation Slides</h2>
+                        <p>Latest build from Main</p>
+                    </div>
+                </div>
+                <span class="badge">PDF</span>
+            </a>
+        </div>
+
+        <footer>
+            <p>Generated automatically via GitHub Actions.</p>
+        </footer>
+    </div>
+
+</body>
+</html>
