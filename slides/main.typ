@@ -101,5 +101,6 @@
 ]
 
 // Bibliography
-#let bib = bibliography("bibliography.bib")
+// note: report-bibliography is a link to the file ../report/bibliography.bib. don't modify that file
+#let bib = bibliography(("bibliography.bib", "report-bibliography.bib"), full: true)
 #bibliography-slide(bib)
