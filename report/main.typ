@@ -12,7 +12,24 @@
   (
     name: "Evan Scamehorn",
     affiliation: [University of Wisconsin\ #email("scamehorn@wisc.edu")],
+    
   ),
+  (
+    name: "Adam Venton",
+    affiliation: [University of Wisconsin\ #email("venton@wisc.edu")],
+  ),
+  (
+    name: "Calvin Kosmatka",
+    affiliation: [University of Wisconsin\ #email("ckosmatka@wisc.edu")],
+  ),
+  (
+    name: "Kyle Sha",
+    affiliation: [University of Wisconsin\ #email("kasha2@wisc.edu")],
+  ),
+  (
+    name: "Zeke Mackay",
+    affiliation: [University of Wisconsin\ #email("afmackay@wisc.edu")],
+  )
 ))
 
 
