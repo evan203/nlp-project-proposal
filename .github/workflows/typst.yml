@@ -1,0 +1,53 @@
+name: Compile Typst Documents to GitHub Pages
+
+on:
+  push:
+    branches: ["**"]  # Trigger on ALL branches
+  workflow_dispatch:
+
+permissions:
+  contents: write  # Required to push to the gh-pages branch
+
+concurrency:
+  # Prevents race conditions if two people push at the same time
+  group: "pages-deploy"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Typst
+        uses: typst-community/setup-typst@v4
+        with:
+          cache-dependency-path: "**/*.typ"
+
+      - name: Compile PDFs
+        run: |
+          mkdir output
+          # Compile typst files into `output/`
+          typst compile report/main.typ output/report.pdf
+          typst compile slides/main.typ output/slides.pdf
+
+      - name: Determine Deploy Path
+        id: path
+        run: |
+          # Logic: If main, deploy to root (.). Otherwise, deploy to folder matching branch name.
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "dest_dir=." >> $GITHUB_OUTPUT
+          else
+            echo "dest_dir=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
+          destination_dir: ${{ steps.path.outputs.dest_dir }}
+          keep_files: true  # CRITICAL: Don't wipe other branches' folders
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
