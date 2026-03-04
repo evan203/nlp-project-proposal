@@ -12,7 +12,7 @@
   (
     name: "Evan Scamehorn",
     affiliation: [University of Wisconsin\ #email("scamehorn@wisc.edu")],
-    
+
   ),
   (
     name: "Adam Venton",
@@ -63,6 +63,20 @@ between safety and utility. Ultimately, ActSVD provides rank-level evidence for
 superposition: safety and utility share representational capacity and are not
 linearly distinct.
 
+#citet("arditi2024") show that for several common chat models, a manipulation of a
+single dimensional subspace is enough to both induce refusal of non-harmful requests, and
+turn off the refusal of harmful requests.
+They use a procedure called *difference-of-means* to identify this subspace. This
+technique the measures the average activations at each token position of each
+transformer layer, compared between a set of harmful requests and a set of harmless
+requests. Once these difference-of-means vectors are constructed, they score each for its
+ability to cause the model to refuse harmless requests and respond to harmful requests. The
+vector with the highest score is normed and selected as the refusal dimension vector, denoted by $hat(r)$.
+This refusal dimension can then be ablated in the residual stream at inference time to bypass refusal
+behavior. This vector can also be used to create a jailbroken model by updating model weights according
+to the following formula: $W'_("out") <- W_("out") - hat(r)hat(r)^T W_("out")$. They find that this attack method
+is successful on the Qwen model family with and without the system prompt, and on the Llama model family without
+the system prompt, and has little effect on model coherence.
 
 
 = Methodology
