@@ -34,6 +34,8 @@
 
 This research finds significant jailbreaking performance gains using one refusal direction, with further gains up to a four-dimensional refusal region. Testing on Gemma-2, Llama 3, and Qwen 2.5 model families and benchmarks such as TruthfulQA, ablation of multiple refusal vectors is shown to have better attack success and lower side-effects on model performance.
 
+Furthermore, noting that vector orthogonality does not guarantee causal independence, the research defines a notion of representational independence between vectors, in which the ablation of one direction does not impact the effects of the other. Ablating three or more representationally independent refusal vectors is found to have higher attack success than difference-of-means direction ablation. This further shows that safety and utility occupy a complex subspace within LLMs. 
+
 = Methodology
 
 #lorem(80)
