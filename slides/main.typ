@@ -123,7 +123,12 @@
    */
   *Datasets and Evaluation Metrics:*
 
-  - Todo
+  - Alpaca 
+    - General, safe instructional dataset containing instructions and outputs from text-davinci-003
+    - Used to test refusal by ablated LLMs 
+  - BeaverTails 
+    - QA pairs of various categories of harmful
+    - Used to test safety of ablated LLMs
 
   #line(length: 100%)
 
