@@ -1,4 +1,16 @@
 #import "@preview/typslides:1.3.2": *
+#import "@preview/fontawesome:0.5.0": *
+
+#let github-tag(repo) = box(
+  fill: gray.lighten(80%),
+  inset: (x: 3pt, y: 0pt),
+  outset: (y: 3pt),
+  radius: 8pt,
+  [#fa-github() #link("https://github.com/" + repo, repo)],
+)
+
+
+
 
 #show: typslides.with(
   ratio: "16-9",
@@ -81,7 +93,7 @@
   *Technical Challenges:*
 
   - Several, vastly different representations of safety subspaces
-  - Previous attempts to isolate independent safety and utility spaces are 
+  - Previous attempts to isolate independent safety and utility spaces are not sufficient
 
   #line(length: 100%)
 
@@ -101,7 +113,7 @@
     - ActSVD safety rank @Wei2024Brittleness
     - Refusal Cone Optimization (RCO) multi-dimensional safety conic space @pmlr-v267-wollschlager25a
   - Implement ActSVD utility rank identification method @Wei2024Brittleness
-  - Comparison of safety and utility subspaces 
+  - Comparison of safety and utility subspaces
     - Mode Subspace Overlap (MSO) similarity test between safety subspaces @Ponkshe2026Safety
     - Representational Independence (RepInd) comparison between each safety subspace and utility subspace @pmlr-v267-wollschlager25a
 
@@ -130,8 +142,9 @@
     - Based on several common refusal phrases (I'm sorry, As an LLM, etc)
   - Attack success rate @pmlr-v267-wollschlager25a
     - Rate of model answering unsafe prompts
-  #line(length: 100%)
+]
 
+#slide[
   /*
    * Add only the most related baseline methods for experimental comparison.
    * Add a brief description of each method per bullet point. The description
@@ -150,8 +163,9 @@
   - Representational Independence (RepInd) @pmlr-v267-wollschlager25a
     - Performs cosine similarity on ablated model activations to test independence of multiple subspaces
 
-  #line(length: 100%)
+]
 
+#slide[
   /*
    * What are the GPUs required (e.g., quantity, GPU RAMs)?
    *
@@ -162,11 +176,12 @@
    */
   *Computing Estimation:*
 
-  - $approx$ 24 GB VRAM (single GPU)
+  - 24 GB VRAM (single GPU) needed for 8B model loading
   - 1.5 hr for ActSVD removing ranks with orthogonal projection
   - 1 hr for difference-in-means
   - 5 hr for RDO
-  - 5 hr for fine tuning and SVD projection
+  // don't think we put fine tuning in our methodology, let's keep this out
+  //- 5 hr for fine tuning and SVD projection
 
   #line(length: 100%)
 
@@ -178,8 +193,10 @@
   *Model Checkpoints and Codebase:*
 
   - Testing will be done on *LLama-3.1-instruct 8B*
-  - Codebases for baseline methods are available in each paper's repository
-
+  #github-tag("boyiwei/alignment-attribution-code")
+  #github-tag("andyrdt/refusal_direction")
+  #github-tag("wollschlager/geometry-of-refusal")
+  #github-tag("CERT-Lab/safety-subspaces")
 ]
 
 // Bibliography
