@@ -38,8 +38,8 @@ jobs:
         run: |
           mkdir output
           # Compile typst files into `output/`
-          typst compile report/main.typ output/report.pdf
-          typst compile slides/main.typ output/slides.pdf
+          typst compile docs/report.typ output/report.pdf
+          typst compile docs/slides.typ output/slides.pdf
 
       - name: Set Deploy Path
         id: path
