@@ -1,2 +1,4 @@
 # tracking pdf files brings merge conflicts and inflates git tree
 *.pdf
+# parquet data files are too large to track
+*.parquet

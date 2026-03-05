@@ -1,6 +1,5 @@
 #import "@preview/typslides:1.3.2": *
 
-// Project configuration
 #show: typslides.with(
   ratio: "16-9",
   theme: "bluey",
@@ -123,8 +122,17 @@
    */
   *Datasets and Evaluation Metrics:*
 
-  - Todo
-
+  - Alpaca @alpaca
+    - General, safe instructional dataset containing instructions and outputs from text-davinci-003
+    - Used to test refusal by ablated LLMs
+  - BeaverTails @beavertails
+    - QA pairs of various categories of harmful prompts
+    - Used to test safety of ablated LLMs
+  - Refusal score @arditi2024
+    - Rate of model refusing to answer
+    - Based on several common refusal phrases (I'm sorry, As an LLM, etc)
+  - Attack success rate @pmlr-v267-wollschlager25a
+    - Rate of model answering unsafe prompts
   #line(length: 100%)
 
   /*
