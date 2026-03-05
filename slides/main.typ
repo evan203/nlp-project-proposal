@@ -1,8 +1,5 @@
 #import "@preview/typslides:1.3.2": *
 
-// Project configuration
-#let bib = bibliography("../report/bibliography.bib", full: true)
-
 #show: typslides.with(
   ratio: "16-9",
   theme: "bluey",
@@ -125,16 +122,16 @@
    */
   *Datasets and Evaluation Metrics:*
 
-  - Alpaca #cite(<alpaca>)
+  - Alpaca @alpaca
     - General, safe instructional dataset containing instructions and outputs from text-davinci-003
-    - Used to test refusal by ablated LLMs 
-  - BeaverTails #cite(<beavertails>)
+    - Used to test refusal by ablated LLMs
+  - BeaverTails @beavertails
     - QA pairs of various categories of harmful prompts
     - Used to test safety of ablated LLMs
-  - Refusal score #cite(<arditi2024>)
+  - Refusal score @arditi2024
     - Rate of model refusing to answer
     - Based on several common refusal phrases (I'm sorry, As an LLM, etc)
-  - Attack success rate #cite(<pmlr-v267-wollschlager25a>)
+  - Attack success rate @pmlr-v267-wollschlager25a
     - Rate of model answering unsafe prompts
   #line(length: 100%)
 
@@ -183,4 +180,5 @@
 
 // Bibliography
 // note: report-bibliography is a link to the file ../report/bibliography.bib. don't modify that file
+#let bib = bibliography("report-bibliography.bib", full: true)
 #bibliography-slide(bib)
