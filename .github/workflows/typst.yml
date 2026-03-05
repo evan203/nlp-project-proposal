@@ -1,0 +1,75 @@
+name: Compile Typst Documents to GitHub Pages
+
+on:
+  push:
+    branches: ["**"]  # Trigger on ALL branches
+    paths:
+      - "**.typ"
+      - ".github/workflows/typst.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write  # Required to push to the gh-pages branch
+  statuses: write  # For adding URLs to commit status
+
+concurrency:
+  # Prevents race conditions if two people push at the same time
+  group: "pages-deploy"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Typst
+        uses: typst-community/setup-typst@v4
+        with:
+          cache-dependency-path: "*/*.typ"
+
+      - name: Install Fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-texgyre fonts-inconsolata
+
+      - name: Compile PDFs
+        run: |
+          mkdir output
+          # Compile typst files into `output/`
+          typst compile report/main.typ output/report.pdf
+          typst compile slides/main.typ output/slides.pdf
+
+      - name: Set Deploy Path
+        id: path
+        run: |
+          echo "dest_dir=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
+          destination_dir: ${{ steps.path.outputs.dest_dir }}
+          keep_files: true  # CRITICAL: Don't wipe other branches' folders
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Create Commit Status report
+        uses: octodemo-resources/github-commit-status@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          state: success
+          context: "PDF / Report"
+          description: "Click details to view report.pdf ⟶"
+          target_url: "https://evan203.github.io/nlp-project-proposal/${{ github.ref_name }}/report.pdf"
+
+      - name: Create Commit Status notes
+        uses: octodemo-resources/github-commit-status@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          state: success
+          context: "PDF / Slides "
+          description: "Click details to view slides.pdf ⟶"
+          target_url: "https://evan203.github.io/nlp-project-proposal/${{ github.ref_name }}/slides.pdf"
