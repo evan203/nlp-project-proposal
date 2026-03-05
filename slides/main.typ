@@ -100,7 +100,15 @@
    */
   *Proposed Methods or Explorations:*
 
-  - To be determined
+  - Identify activation-space directions for both safety and utility
+    - Use difference of means to get a single direction
+    - Use graident algorithm (RDO) from cones paper to get a subspace
+  - Compare metrics about independence
+    - representational independence (rather than orthogonality)
+    - is the difference of means direction in the subspace of the
+      multi-dimensional cone?
+    - cosine similarty of directions
+    - modal subspace interlap: compare subspaces yielded by RDO and SVD
 ]
 
 #slide[
@@ -126,7 +134,9 @@
    */
   *Baseline Methods:*
 
-  - Todo
+  - Representational Independence
+  - Consine similarty
+  - Modal subspace overlap
 
   #line(length: 100%)
 
@@ -140,7 +150,11 @@
    */
   *Computing Estimation:*
 
-  - Todo
+  - $approx$ 24 GB VRAM (single GPU)
+  - 1.5 hr for ActSVD removing ranks with orthogonal projection
+  - 1 hr for difference-of-means
+  - 5 hr for RDO
+  - 5 hr for fine tuning and SVD projection
 
   #line(length: 100%)
 
@@ -151,7 +165,9 @@
    */
   *Model Checkpoints and Codebase:*
 
-  - Todo
+  - LLama-3.1-instruct 8B
+  - Gemma-2 9B
+  - Quen-2.5-instruct 7B
 ]
 
 // Bibliography
