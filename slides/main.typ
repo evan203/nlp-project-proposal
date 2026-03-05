@@ -80,11 +80,8 @@
    */
   *Technical Challenges:*
 
-  - Refusal is known to span *multi-dimensional "concept cones"* containing *
-    infinite refusal directions* and *multi-dimensional "safety residual
-    spaces"*
-  - The geometric mechanics of how fine-tuning destroys these structures is
-    *poorly understood*
+  - Several, vastly different representations of safety subspaces
+  - Previous attempts to isolate independent safety and utility spaces are 
 
   #line(length: 100%)
 
@@ -99,15 +96,15 @@
    */
   *Proposed Methods or Explorations:*
 
-  - Identify activation-space directions for both safety and utility
-    - Use difference of means to get a single direction
-    - Use graident algorithm (RDO) from cones paper to get a subspace
-  - Compare metrics about independence
-    - representational independence (rather than orthogonality)
-    - is the difference of means direction in the subspace of the
-      multi-dimensional cone?
-    - cosine similarty of directions
-    - modal subspace interlap: compare subspaces yielded by RDO and SVD
+  - Implement multiple safety space identification methods
+    - Difference-in-means (DIM) safety vector @arditi2024
+    - ActSVD safety rank @Wei2024Brittleness
+    - Refusal Cone Optimization (RCO) multi-dimensional safety conic space @pmlr-v267-wollschlager25a
+  - Implement ActSVD utility rank identification method @Wei2024Brittleness
+  - Comparison of safety and utility subspaces 
+    - Mode Subspace Overlap (MSO) similarity test between safety subspaces @Ponkshe2026Safety
+    - Representational Independence (RepInd) comparison between each safety subspace and utility subspace @pmlr-v267-wollschlager25a
+
 ]
 
 #slide[
@@ -142,9 +139,16 @@
    */
   *Baseline Methods:*
 
-  - Representational Independence
-  - Consine similarty
-  - Modal subspace overlap
+  - Difference-in-means (DIM) @arditi2024
+    - Mean response activation difference between harmful and harmless prompts
+  - Refusal Cone Optimization (RCO) @pmlr-v267-wollschlager25a
+    - Use gradient descnet to generate multiple basis vectors representing safety mechanisms
+  - ActSVD safety/utility ranks @Wei2024Brittleness
+    - Perform Singular Value Decomposition on model weights to identify safety/utility-critical low-rank matrices
+  - Mode Subspace Overlap (MSO) @Ponkshe2026Safety
+    - Performs SVD to quantify overlap between subspaces
+  - Representational Independence (RepInd) @pmlr-v267-wollschlager25a
+    - Performs cosine similarity on ablated model activations to test independence of multiple subspaces
 
   #line(length: 100%)
 
@@ -160,7 +164,7 @@
 
   - $approx$ 24 GB VRAM (single GPU)
   - 1.5 hr for ActSVD removing ranks with orthogonal projection
-  - 1 hr for difference-of-means
+  - 1 hr for difference-in-means
   - 5 hr for RDO
   - 5 hr for fine tuning and SVD projection
 
@@ -173,9 +177,9 @@
    */
   *Model Checkpoints and Codebase:*
 
-  - LLama-3.1-instruct 8B
-  - Gemma-2 9B
-  - Quen-2.5-instruct 7B
+  - Testing will be done on *LLama-3.1-instruct 8B*
+  - Codebases for baseline methods are available in each paper's repository
+
 ]
 
 // Bibliography
