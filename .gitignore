@@ -1,0 +1,2 @@
+# parquet data files are too large to track
+*.parquet
