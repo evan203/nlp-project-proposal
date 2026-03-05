@@ -10,7 +10,7 @@
 )
 
 #front-slide(
-  title: "Examining the Superposition of Saftey and Utility in LLM Activation Spaces",
+  title: "The Geometry of Refusal: A Comparative Subspace Analysis of Safety Mechanisms",
   subtitle: [_Project Proposal_],
   authors: "Group 6: Evan Scamehorn, Kyle Sha, Adam Venton, Zeke Mackay, and Calvin Kosmatka",
   info: [#link("https://github.com/evan203/nlp-project-proposal")],
@@ -20,30 +20,12 @@
 
   // What is the problem?
   *Problem Description:*
-  /*
-   * Course staff slides template asks us to describe:
-   *
-   * 1. What is the input and output format of the tasks? If your problem
-   * requires multiple datasets, try to clearly define them in math notations.
-   *
-   * 2. What are the objectives of the problem? (e.g., learn a classifier,
-   * prevent models from forgetting fine-tuning tasks). Clearly define the
-   * scope of the project. If your project idea involves building multiple ML
-   * models, try to narrow the scope and pick the most critical model that is
-   * still weak and has large room for improvement.
-   *
-   * 3. [Optional] Given a figure to illustrate an example on the right empty
-   * space.
-   *
-   * here is a starting point, we can refine from here
-   */
 
-  - Aligned LLMs can produce *harmful outputs* using many diverse
-    *jailbreaking* techniques
-  - We seek to understand why safety mechanisms of LLMs are *fragile* by
-    examining the *activation space* of harmful and helpful prompts
-  - Recent studies demonstrate that safety and utility share
-    *representational capacity* (superposition) in linear activation space
+  - *The "Geometry" Debate:*
+      - *Vector:* Safety is a single direction (Arditi et al., 2024).
+      - *Cone:* Safety is a multi-dimensional cone (Wollschläger et al., 2025).
+      - *Rank:* Safety is a statistical variance component (Wei et al., 2024).
+  - *The Gap:* No study has rigorously compared the *geometric overlap* of these shapes on the same model. Do they target the same dimensions?
 
   #line(length: 100%)
 
@@ -59,11 +41,8 @@
    */
   *Significance and Research Value:*
 
-  - Addressing failure cases in the alignment of LLMs requires a deep
-    understanding of why their safety mechanisms are fragile.
-  - Mechanistic interpretability can be used to better understand how safety
-    mechanisms operate, and inform creating more robust safety alignment
-    methods
+  - *Unifying Frameworks:* We aim to map the "Refusal Landscape" of Llama-3.1 to determine if simple vectors are sufficient or if complex cones are required.
+  - *Representation Independence:* Finding the subspace that is most orthogonal to "General Utility" allows for safer model unlearning and jailbreaking defenses.
 ]
 
 #slide[
@@ -80,11 +59,8 @@
    */
   *Technical Challenges:*
 
-  - Refusal is known to span *multi-dimensional "concept cones"* containing *
-    infinite refusal directions* and *multi-dimensional "safety residual
-    spaces"*
-  - The geometric mechanics of how fine-tuning destroys these structures is
-    *poorly understood*
+  - *Geometric Complexity:* "Refusal" is likely high-dimensional. We must use *Refusal Direction Optimization (RDO)* to find the full cone, not just averages.
+  - *Measuring Overlap:* We need rigorous metrics like *Modal Subspace Overlap (MSO)* (Ponkshe et al.) and *Principal Angles* to quantify how much safety "bleeds" into utility.
 
   #line(length: 100%)
 
@@ -99,15 +75,14 @@
    */
   *Proposed Methods or Explorations:*
 
-  - Identify activation-space directions for both safety and utility
-    - Use difference of means to get a single direction
-    - Use graident algorithm (RDO) from cones paper to get a subspace
-  - Compare metrics about independence
-    - representational independence (rather than orthogonality)
-    - is the difference of means direction in the subspace of the
-      multi-dimensional cone?
-    - cosine similarty of directions
-    - modal subspace interlap: compare subspaces yielded by RDO and SVD
+  1.  *Extract Subspaces (Linear Spans):*
+      - $S_"vec"$ (Arditi): Rank-1 subspace (Difference-of-Means).
+      - $S_"cone"$ (Wollschläger): Multi-dim subspace (RDO Basis).
+      - $S_"util"$ (Baseline): Unbiased variance directions (ActSVD).
+  2.  *Geometric Analysis:*
+      - *Comparison:* Compute Principal Angles & MSO.
+      - *Hypothesis:* $S_"cone"$ minimizes entanglement with $S_"util"$.
+      - *Layer-wise:* Track how safety subspaces emerge across depth.
 ]
 
 #slide[
@@ -142,9 +117,8 @@
    */
   *Baseline Methods:*
 
-  - Representational Independence
-  - Consine similarty
-  - Modal subspace overlap
+  - *Vector Baseline:* $S_"vec"$ (Difference-of-Means) - Assumes 1D safety.
+  - *Rank Baseline:* $S_"svd"$ (ActSVD) - Assumes variance = safety.
 
   #line(length: 100%)
 
@@ -158,11 +132,12 @@
    */
   *Computing Estimation:*
 
-  - $approx$ 24 GB VRAM (single GPU)
-  - 1.5 hr for ActSVD removing ranks with orthogonal projection
-  - 1 hr for difference-of-means
-  - 5 hr for RDO
-  - 5 hr for fine tuning and SVD projection
+  - *Hardware:* ~24GB VRAM (Single A100/H100 or dual 3090).
+  - *Time:* ~5 hrs for RDO training, ~2 hrs for SVD extraction.
+  - *Plan:*
+      - *Week 1:* Extract Baselines ($S_"vec"$, $S_"svd"$). (Evan/Kyle)
+      - *Week 2:* Run RDO ($S_"cone"$) & Compute Geometry. (Adam/Zeke)
+      - *Week 3:* Validation Experiments & Final Report. (Calvin)
 
   #line(length: 100%)
 
@@ -173,12 +148,10 @@
    */
   *Model Checkpoints and Codebase:*
 
-  - LLama-3.1-instruct 8B
-  - Gemma-2 9B
-  - Quen-2.5-instruct 7B
+  - *Primary Model:* Llama-3.1-8B-Instruct.
+  - *Comparisons:* Gemma-2-9B, Qwen-2.5-7B-Instruct.
+  - *Code:* Custom PyTorch implementations of RDO and ActSVD.
 ]
 
-// Bibliography
-// note: report-bibliography is a link to the file ../report/bibliography.bib. don't modify that file
-#let bib = bibliography("report-bibliography.bib", full: true)
+#let bib = bibliography("report-bibliography.bib")
 #bibliography-slide(bib)
