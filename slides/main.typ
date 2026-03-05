@@ -152,3 +152,6 @@
   - *Comparisons:* Gemma-2-9B, Qwen-2.5-7B-Instruct.
   - *Code:* Custom PyTorch implementations of RDO and ActSVD.
 ]
+
+#let bib = bibliography("report-bibliography.bib")
+#bibliography-slide(bib)

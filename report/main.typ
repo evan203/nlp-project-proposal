@@ -82,7 +82,7 @@ We extract three candidate "Safety Subspaces" by taking the linear span of their
 3.  *$S_"svd"$ (Wei)*: The top-$k$ "Safety Ranks" found by performing SVD on the activations of harmful prompts.
 
 == Utility Definition
-To measure "collateral damage," we define a **Utility Subspace** ($S_"util"$) by running **ActSVD** on a sampled subset of the `GSM8K` (Math) and `MMLU` (General Knowledge) datasets. As ActSVD identifies directions of high variance, this provides an unbiased "baseline" for where the model's processing capacity is concentrated during useful tasks, independent of any specific refusal method.
+To measure "collateral damage," we define a *Utility Subspace* ($S_"util"$) by running *ActSVD* on a sampled subset of the `GSM8K` (Math) and `MMLU` (General Knowledge) datasets. As ActSVD identifies directions of high variance, this provides an unbiased "baseline" for where the model's processing capacity is concentrated during useful tasks, independent of any specific refusal method.
 
 == Geometric Metrics
 We compare these subspaces with rigorous mathematical metrics:
