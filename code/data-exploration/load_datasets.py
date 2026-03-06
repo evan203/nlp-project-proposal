@@ -1,3 +1,4 @@
+import ast
 from huggingface_hub import login
 from os import mkdir
 from os.path import exists
@@ -6,32 +7,44 @@ from torch.utils.data import Dataset
 
 hf_alpaca_path = "hf://datasets/tatsu-lab/alpaca/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet"
 hf_beaver_tails_path = "hf://datasets/PKU-Alignment/BeaverTails/round0/330k/train.jsonl.xz"
-default_out_alpaca = './data/alpaca.parquet'
-default_out_beaver_tails = './data/beaver_tails.parquet'
+default_out_alpaca = './data/alpaca.csv'
+default_out_beaver_tails = './data/beaver_tails.csv'
 
 def generate_alpaca_df(path=hf_alpaca_path):
     """Load Alpaca from HuggingFace or local path to Pandas DF"""
-    assert path.endswith(".parquet"), "Alpaca path must be a .parquet file"
-    return pd.read_parquet(path)
+    if path.endswith('.parquet'):
+        return pd.read_parquet(path)
+    elif path.endswith('.csv'):
+        return pd.read_csv(path)
+    else:
+        raise Exception("Alpaca must be a .parquet/.csv file")
 
 def generate_beaver_tails_df(path=hf_beaver_tails_path):
     """Load BeaverTails from HuggingFace or local path to Pandas DF"""
+
     if path.endswith('jsonl.xz'):
-        return pd.read_json(path,lines=True)
-    elif path.endswith('.parquet'):
-        return pd.read_parquet(path)
+        beaver_tails = pd.read_json(path,lines=True)
+    elif path.endswith('.csv'):
+        beaver_tails = pd.read_csv(path)
     else:
-        raise Exception("BeaverTails path must be a .parquet file")
+        raise Exception("BeaverTails path must be a .json or .csv file")
+    
+    categories = beaver_tails['category'].apply(lambda x: ast.literal_eval(x) if isinstance(x,str) else x)
+    beaver_tails = beaver_tails.drop('category',axis=1)
+    category_cols = categories.apply(pd.Series)
+    beaver_tails = pd.concat([beaver_tails,category_cols],axis=1)
+
+    return beaver_tails
 
 def load_alpaca_local(in_path=hf_alpaca_path,out_path=default_out_alpaca):
     """Download Alpaca"""
     alpaca_df = generate_alpaca_df(in_path)
-    alpaca_df.to_parquet(path=out_path)
+    alpaca_df.to_csv(out_path)
 
 def load_beaver_tails_local(in_path=hf_beaver_tails_path,out_path=default_out_beaver_tails):
     "Download BeaverTails"
     beaver_tails_df = generate_beaver_tails_df(in_path)
-    beaver_tails_df.to_parquet(path=out_path)
+    beaver_tails_df.to_csv(out_path)
 
 class HarmDataset(Dataset):
     def __init__(self,dataset,path=hf_alpaca_path):
