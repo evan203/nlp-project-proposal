@@ -3,6 +3,7 @@ name = "code"
 version = "0.1.0"
 description = "code for nlp research"
 readme = "README.md"
+requires-python = ">=3.12"
 dependencies = [
     "numpy",
     "torch",
