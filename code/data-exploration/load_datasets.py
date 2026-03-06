@@ -63,7 +63,7 @@ class HarmDataset(Dataset):
             instr = row[['instruction','input']]
             out = row['output']
         if self.dataset == 'beaver_tails':
-            instr = row[['prompt','category']]
+            instr = row['prompt']
             out = row['response']
         return instr,out
     def beaver_tails_prune_unsafe(self):
