@@ -79,6 +79,27 @@
 ]
 
 #slide[
+  /*
+   * Add only the most related baseline methods for experimental comparison.
+   * Add a brief description of each method per bullet point. The description
+   * should highlight the distinction of the method and your proposed idea.
+   */
+  *Baseline Methods:*
+
+  - Difference-in-means (DIM) @arditi2024
+    - Mean response activation difference between harmful and harmless prompts
+  - Refusal Cone Optimization (RCO) @pmlr-v267-wollschlager25a
+    - Use gradient descent to generate multiple basis vectors representing safety mechanisms
+  - ActSVD safety/utility ranks @Wei2024Brittleness
+    - Perform Singular Value Decomposition on model weights to identify safety/utility-critical low-rank matrices
+  - Mode Subspace Overlap (MSO) @Ponkshe2026Safety
+    - Performs SVD to quantify overlap between subspaces
+  - Representational Independence (RepInd) @pmlr-v267-wollschlager25a
+    - Performs cosine similarity on ablated model activations to test independence of multiple subspaces
+
+]
+
+#slide[
 
   /*
    * 1. Why is it hard? (E.g., why do naive approaches fail?)
@@ -146,27 +167,6 @@
 
 #slide[
   /*
-   * Add only the most related baseline methods for experimental comparison.
-   * Add a brief description of each method per bullet point. The description
-   * should highlight the distinction of the method and your proposed idea.
-   */
-  *Baseline Methods:*
-
-  - Difference-in-means (DIM) @arditi2024
-    - Mean response activation difference between harmful and harmless prompts
-  - Refusal Cone Optimization (RCO) @pmlr-v267-wollschlager25a
-    - Use gradient descnet to generate multiple basis vectors representing safety mechanisms
-  - ActSVD safety/utility ranks @Wei2024Brittleness
-    - Perform Singular Value Decomposition on model weights to identify safety/utility-critical low-rank matrices
-  - Mode Subspace Overlap (MSO) @Ponkshe2026Safety
-    - Performs SVD to quantify overlap between subspaces
-  - Representational Independence (RepInd) @pmlr-v267-wollschlager25a
-    - Performs cosine similarity on ablated model activations to test independence of multiple subspaces
-
-]
-
-#slide[
-  /*
    * What are the GPUs required (e.g., quantity, GPU RAMs)?
    *
    * Estimate how long it will take to run one experiment. For example,
@@ -179,7 +179,7 @@
   - 24 GB VRAM (single GPU) needed for 8B model loading
   - 1.5 hr for ActSVD removing ranks with orthogonal projection
   - 1 hr for difference-in-means
-  - 5 hr for RDO
+  - 5 hr for RCO
   // don't think we put fine tuning in our methodology, let's keep this out
   //- 5 hr for fine tuning and SVD projection
 
