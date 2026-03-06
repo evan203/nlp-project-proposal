@@ -325,10 +325,7 @@ if __name__ == "__main__":
 
     sanity_check = True
     modeltype2path = {
-        "llama2-7b-chat-hf": "",
-        "llama2-13b-chat-hf": "",
-        "llama2-7b-hf": "",
-        "llama2-13b-hf": "",
+        "llama2-7b-chat-hf": "meta-llama/Llama-2-7b-chat-hf",
     }
 
     def get_llm(model_name, cache_dir="llm_weights"):
@@ -343,14 +340,11 @@ if __name__ == "__main__":
         model.seqlen = model.config.max_position_embeddings
         return model
 
-    if args.model == "llama2-7b-chat-hf":
-        tokenizer = AutoTokenizer.from_pretrained(modeltype2path["llama2-7b-chat-hf"])
-        model = get_llm("llama2-7b-chat-hf")
-    elif args.model == "llama2-13b-chat-hf":
-        tokenizer = AutoTokenizer.from_pretrained(modeltype2path["llama2-13b-chat-hf"])
-        model = get_llm("llama2-13b-chat-hf")
+    if args.model in modeltype2path:
+        tokenizer = AutoTokenizer.from_pretrained(modeltype2path[args.model])
+        model = get_llm(args.model)
     else:
-        raise NotImplementedError
+        raise NotImplementedError(f"Model {args.model} not supported")
 
     # model_act.forward(input_ids = inputs['input_ids'])
 
