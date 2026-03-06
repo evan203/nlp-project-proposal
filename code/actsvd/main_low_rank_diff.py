@@ -3,16 +3,17 @@
 
 import argparse
 import os
-import numpy as np
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch.nn as nn
-from typing import Optional
-from importlib.metadata import version
 from lib.data import get_loaders
 from lib.eval import eval_ppl, eval_zero_shot, eval_attack
 from functools import reduce
 from vllm import LLM
+
+# import numpy as np
+# from typing import Optional
+# from importlib.metadata import version
 
 
 class ActLinear(nn.Module):
@@ -174,8 +175,8 @@ def make_low_rank(
     num_hidden_layers = model.config.num_hidden_layers
 
     for layer in range(num_hidden_layers):
-        layer_filter_fn = (
-            lambda x: f"layers.{layer}." in x
+        layer_filter_fn = lambda x: (
+            f"layers.{layer}." in x
         )  ### TODO # hack for llama series
 
         # enable recording for the current layer.
@@ -274,7 +275,6 @@ def make_low_rank(
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="llama2-7b-chat-hf")
 
@@ -413,7 +413,6 @@ if __name__ == "__main__":
                     )
 
         if args.eval_attack:
-
             if True:
                 # note: since vLLM only supports loading from the path, we need to save the pruned model first for faster evaluation. We can reuse this temp folder to save disk spaces
                 pruned_path = os.path.join("temp", f"_vllm_tmp")
@@ -552,7 +551,7 @@ if __name__ == "__main__":
                     )
                     sum_acc += v["acc"]
                 print(
-                    f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\taveraged\t{sum_acc/len(task_list):.4f}",
+                    f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\taveraged\t{sum_acc / len(task_list):.4f}",
                     file=f,
                     flush=True,
                 )

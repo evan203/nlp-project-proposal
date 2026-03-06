@@ -7,6 +7,9 @@ requires-python = ">=3.12"
 dependencies = [
     "numpy",
     "torch",
+    "transformers",
+    "datasets",
+    "vllm",
 ]
 
 # force using cuda for pytorch

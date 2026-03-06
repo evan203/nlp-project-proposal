@@ -4,13 +4,13 @@ import torch
 import torch.nn as nn
 import numpy as np
 import pandas as pd
-import time
 
-from collections import defaultdict
 import fnmatch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from tqdm import tqdm
 from vllm import SamplingParams
+
+# from collections import defaultdict
+# from transformers import AutoTokenizer, AutoModelForCausalLM
+# from tqdm import tqdm
 
 # Import get_loaders function from data module within the same directory
 from .data import get_loaders
@@ -335,9 +335,9 @@ def eval_attack(
 
             final_score_temp[i] = output_score.reshape(-1, 1).max(axis=1).mean()
             if save_attack_res:
-                assert (
-                    filename != ""
-                ), "Please provide a filename to save the attack results."
+                assert filename != "", (
+                    "Please provide a filename to save the attack results."
+                )
                 res.to_json(filename, orient="records", lines=True)
         # Final score is the max value inside final_score_temp
         final_score = max(final_score_temp)
@@ -391,8 +391,8 @@ def eval_attack(
 
         final_score = output_score.reshape(-1, 1).max(axis=1).mean()
         if save_attack_res:
-            assert (
-                filename != ""
-            ), "Please provide a filename to save the attack results."
+            assert filename != "", (
+                "Please provide a filename to save the attack results."
+            )
             res.to_json(filename, orient="records", lines=True)
         return final_score
