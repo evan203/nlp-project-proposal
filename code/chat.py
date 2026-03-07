@@ -72,7 +72,7 @@ def chat(model_path, tokenizer_path=None, system_prompt=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--model_path", type=str, required=True, help="Path to modified model"
+        "--model_path", type=str, default="out", help="Path to modified model"
     )
     parser.add_argument(
         "--tokenizer_path",
