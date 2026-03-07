@@ -330,6 +330,7 @@ if __name__ == "__main__":
     modeltype2path = {
         "llama2-7b-chat-hf": "meta-llama/Llama-2-7b-chat-hf",
         "Llama-3.1-8B-Instruct": "meta-llama/Llama-3.1-8B-Instruct",
+        "Qwen3.5-9B": "Qwen/Qwen3.5-9B",
     }
 
     def get_llm(model_name, cache_dir="llm_weights"):
