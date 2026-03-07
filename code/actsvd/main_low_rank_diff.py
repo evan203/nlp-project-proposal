@@ -351,208 +351,186 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError(f"Model {args.model} not supported")
 
-    # model_act.forward(input_ids = inputs['input_ids'])
+    device = "cuda"
+    make_low_rank(
+        args,
+        model,
+        tokenizer,
+        device,
+        prune_data_pos=args.prune_data_pos,
+        prune_data_neg=args.prune_data_neg,
+    )
 
-    if False:
-        model_act = make_Act(model, verbose=False)
-        clear_act_buffer(model_act)
-        print(tokenizer.batch_decode(model_act.generate(**inputs, max_length=200)))
-        for n, m in model_act.named_modules():
-            if isinstance(m, ActLinear):
-                print(n, m.activation_norms)
+    # Save model after ActSVD and orthogonal projection
+    if not os.path.exists(args.save):
+        os.makedirs(args.save)
+    model.save_pretrained(args.save)
+    tokenizer.save_pretrained(args.save)
+    print(f"Model saved to {args.save}")
 
-    if False:
-        model_act = make_Act(model, verbose=False)
-        with no_act_recording(model_act):
-            print(tokenizer.batch_decode(model_act.generate(**inputs, max_length=20)))
-            for n, m in model_act.named_modules():
-                if isinstance(m, ActLinear):
-                    print(n, m.activation_norms)
+    # evaluation begin
 
-    if True:
-        # model_base = get_llm('llama2-7b-hf')
-        device = "cuda"
-        make_low_rank(
-            args,
-            model,
-            tokenizer,
-            device,
-            prune_data_pos=args.prune_data_pos,
-            prune_data_neg=args.prune_data_neg,
+    ppl_test = eval_ppl(args, model, tokenizer, device)
+    print(f"wikitext perplexity {ppl_test}")
+
+    if not os.path.exists(args.save):
+        os.makedirs(args.save)
+    save_filepath = os.path.join(args.save, f"log.txt")
+    save_attackpath = os.path.join(args.save, f"attack_{args.rank_pos}_{args.rank_neg}")
+    if not os.path.exists(save_attackpath):
+        os.makedirs(save_attackpath)
+    if not os.path.exists(save_filepath):
+        with open(save_filepath, "w") as f:
+            print("rank\tINST\tmetric\tscore", file=f, flush=True)
+            print(
+                f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\tPPL\t{ppl_test:.4f}",
+                file=f,
+                flush=True,
+            )
+    else:
+        with open(save_filepath, "a") as f:
+            print(
+                f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\tPPL\t{ppl_test:.4f}",
+                file=f,
+                flush=True,
+            )
+
+    if args.eval_attack:
+        # note: since vLLM only supports loading from the path, we need to save the pruned model first for faster evaluation. We can reuse this temp folder to save disk spaces
+        pruned_path = os.path.join("temp", f"_vllm_tmp")
+        model.save_pretrained(pruned_path)
+        vllm_model = LLM(
+            model=pruned_path,
+            tokenizer=modeltype2path[args.model],
+            dtype="bfloat16",
+            swap_space=128,
         )
-
-        # evaluation begin
-
-        if True:
-            ppl_test = eval_ppl(args, model, tokenizer, device)
-            print(f"wikitext perplexity {ppl_test}")
-
-            if not os.path.exists(args.save):
-                os.makedirs(args.save)
-            save_filepath = os.path.join(args.save, f"log.txt")
-            save_attackpath = os.path.join(
-                args.save, f"attack_{args.rank_pos}_{args.rank_neg}"
-            )
-            if not os.path.exists(save_attackpath):
-                os.makedirs(save_attackpath)
-            if not os.path.exists(save_filepath):
-                with open(save_filepath, "w") as f:
-                    print("rank\tINST\tmetric\tscore", file=f, flush=True)
-                    print(
-                        f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\tPPL\t{ppl_test:.4f}",
-                        file=f,
-                        flush=True,
-                    )
-            else:
-                with open(save_filepath, "a") as f:
-                    print(
-                        f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\tPPL\t{ppl_test:.4f}",
-                        file=f,
-                        flush=True,
-                    )
-
-        if args.eval_attack:
-            if True:
-                # note: since vLLM only supports loading from the path, we need to save the pruned model first for faster evaluation. We can reuse this temp folder to save disk spaces
-                pruned_path = os.path.join("temp", f"_vllm_tmp")
-                model.save_pretrained(pruned_path)
-                vllm_model = LLM(
-                    model=pruned_path,
-                    tokenizer=modeltype2path[args.model],
-                    dtype="bfloat16",
-                    swap_space=128,
-                )
-                if True:
-                    vllm_model.llm_engine.tokenizer.add_special_tokens(
-                        {"pad_token": "[PAD]"}
-                    )
-                for include_inst in [True, False]:
-                    suffix = "inst_" if include_inst else "no_inst_"
-                    print("********************************")
-
-                    score = eval_attack(
-                        vllm_model,
-                        tokenizer,
-                        num_sampled=1,
-                        add_sys_prompt=True,
-                        do_sample=False,
-                        save_attack_res=args.save_attack_res,
-                        include_inst=include_inst,
-                        filename=os.path.join(save_attackpath, f"{suffix}basic.jsonl"),
-                    )
-                    print(f"attack evaluation results ({suffix}basic): {score:.4f}")
-                    with open(save_filepath, "a") as f:
-                        print(
-                            f"{args.rank_pos}_{args.rank_neg}\t{suffix}\tASR_basic\t{score:.4f}",
-                            file=f,
-                            flush=True,
-                        )
-
-                    print("********************************")
-                    score = eval_attack(
-                        vllm_model,
-                        tokenizer,
-                        num_sampled=1,
-                        add_sys_prompt=False,
-                        do_sample=False,
-                        save_attack_res=args.save_attack_res,
-                        include_inst=include_inst,
-                        filename=os.path.join(
-                            save_attackpath, f"{suffix}basic_no_sys.jsonl"
-                        ),
-                    )
-                    print(
-                        f"attack evaluation results ({suffix}basic, no sys prompt): {score:.4f}"
-                    )
-                    with open(save_filepath, "a") as f:
-                        print(
-                            f"{args.rank_pos}_{args.rank_neg}\t{suffix}\tASR_basic_nosys\t{score:.4f}",
-                            file=f,
-                            flush=True,
-                        )
-                    # seems that llama2-13b may run into error on this :(
-                    print("********************************")
-                    score = eval_attack(
-                        vllm_model,
-                        tokenizer,
-                        num_sampled=5,
-                        add_sys_prompt=False,
-                        do_sample=True,
-                        save_attack_res=args.save_attack_res,
-                        include_inst=include_inst,
-                        filename=os.path.join(
-                            save_attackpath, f"{suffix}multiple_no_sys.jsonl"
-                        ),
-                    )
-                    print(
-                        f"attack evaluation results ({suffix}multiple, no sys prompt): {score:.4f}"
-                    )
-                    with open(save_filepath, "a") as f:
-                        print(
-                            f"{args.rank_pos}_{args.rank_neg}\t{suffix}\tASR_multiple_nosys\t{score:.4f}",
-                            file=f,
-                            flush=True,
-                        )
-                score = eval_attack(
-                    vllm_model,
-                    tokenizer,
-                    num_sampled=1,
-                    add_sys_prompt=False,
-                    gcg=True,
-                    do_sample=False,
-                    save_attack_res=args.save_attack_res,
-                    include_inst=True,
-                    filename=os.path.join(save_attackpath, f"gcg.jsonl"),
-                )
-                print(f"attack evaluation results (gcg): {score:.4f}")
-                with open(save_filepath, "a") as f:
-                    print(
-                        f"{args.rank_pos}_{args.rank_neg}\t{suffix}\tASR_gcg\t{score:.4f}",
-                        file=f,
-                        flush=True,
-                    )
-                del vllm_model
-
-        if args.eval_zero_shot:
-            accelerate = False
-            if "30b" in args.model or "65b" in args.model or "70b" in args.model:
-                accelerate = True
-
-            task_list = [
-                "boolq",
-                "rte",
-                "hellaswag",
-                "winogrande",
-                "arc_easy",
-                "arc_challenge",
-                "openbookqa",
-            ]
-            # task_list = ["rte","hellaswag","arc_easy","arc_challenge", "openbookqa"]
-            num_shot = 0
-            results = eval_zero_shot(
-                modeltype2path[args.model],
-                model,
-                tokenizer,
-                task_list,
-                num_shot,
-                accelerate,
-                limit=1000,
-            )
+        vllm_model.llm_engine.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+        for include_inst in [True, False]:
+            suffix = "inst_" if include_inst else "no_inst_"
             print("********************************")
-            print("zero_shot evaluation results")
-            sum_acc = 0
+
+            score = eval_attack(
+                vllm_model,
+                tokenizer,
+                num_sampled=1,
+                add_sys_prompt=True,
+                do_sample=False,
+                save_attack_res=args.save_attack_res,
+                include_inst=include_inst,
+                filename=os.path.join(save_attackpath, f"{suffix}basic.jsonl"),
+            )
+            print(f"attack evaluation results ({suffix}basic): {score:.4f}")
             with open(save_filepath, "a") as f:
-                for k, v in results["results"].items():
-                    print(
-                        f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\t{k}\t{v['acc']:.4f}",
-                        file=f,
-                        flush=True,
-                    )
-                    sum_acc += v["acc"]
                 print(
-                    f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\taveraged\t{sum_acc / len(task_list):.4f}",
+                    f"{args.rank_pos}_{args.rank_neg}\t{suffix}\tASR_basic\t{score:.4f}",
                     file=f,
                     flush=True,
                 )
 
-            print(results)
+            print("********************************")
+            score = eval_attack(
+                vllm_model,
+                tokenizer,
+                num_sampled=1,
+                add_sys_prompt=False,
+                do_sample=False,
+                save_attack_res=args.save_attack_res,
+                include_inst=include_inst,
+                filename=os.path.join(save_attackpath, f"{suffix}basic_no_sys.jsonl"),
+            )
+            print(
+                f"attack evaluation results ({suffix}basic, no sys prompt): {score:.4f}"
+            )
+            with open(save_filepath, "a") as f:
+                print(
+                    f"{args.rank_pos}_{args.rank_neg}\t{suffix}\tASR_basic_nosys\t{score:.4f}",
+                    file=f,
+                    flush=True,
+                )
+            # seems that llama2-13b may run into error on this :(
+            print("********************************")
+            score = eval_attack(
+                vllm_model,
+                tokenizer,
+                num_sampled=5,
+                add_sys_prompt=False,
+                do_sample=True,
+                save_attack_res=args.save_attack_res,
+                include_inst=include_inst,
+                filename=os.path.join(
+                    save_attackpath, f"{suffix}multiple_no_sys.jsonl"
+                ),
+            )
+            print(
+                f"attack evaluation results ({suffix}multiple, no sys prompt): {score:.4f}"
+            )
+            with open(save_filepath, "a") as f:
+                print(
+                    f"{args.rank_pos}_{args.rank_neg}\t{suffix}\tASR_multiple_nosys\t{score:.4f}",
+                    file=f,
+                    flush=True,
+                )
+        score = eval_attack(
+            vllm_model,
+            tokenizer,
+            num_sampled=1,
+            add_sys_prompt=False,
+            gcg=True,
+            do_sample=False,
+            save_attack_res=args.save_attack_res,
+            include_inst=True,
+            filename=os.path.join(save_attackpath, f"gcg.jsonl"),
+        )
+        print(f"attack evaluation results (gcg): {score:.4f}")
+        with open(save_filepath, "a") as f:
+            print(
+                f"{args.rank_pos}_{args.rank_neg}\t{suffix}\tASR_gcg\t{score:.4f}",
+                file=f,
+                flush=True,
+            )
+        del vllm_model
+
+    if args.eval_zero_shot:
+        accelerate = False
+        if "30b" in args.model or "65b" in args.model or "70b" in args.model:
+            accelerate = True
+
+        task_list = [
+            "boolq",
+            "rte",
+            "hellaswag",
+            "winogrande",
+            "arc_easy",
+            "arc_challenge",
+            "openbookqa",
+        ]
+        # task_list = ["rte","hellaswag","arc_easy","arc_challenge", "openbookqa"]
+        num_shot = 0
+        results = eval_zero_shot(
+            modeltype2path[args.model],
+            model,
+            tokenizer,
+            task_list,
+            num_shot,
+            accelerate,
+            limit=1000,
+        )
+        print("********************************")
+        print("zero_shot evaluation results")
+        sum_acc = 0
+        with open(save_filepath, "a") as f:
+            for k, v in results["results"].items():
+                print(
+                    f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\t{k}\t{v['acc']:.4f}",
+                    file=f,
+                    flush=True,
+                )
+                sum_acc += v["acc"]
+            print(
+                f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\taveraged\t{sum_acc / len(task_list):.4f}",
+                file=f,
+                flush=True,
+            )
+
+        print(results)
