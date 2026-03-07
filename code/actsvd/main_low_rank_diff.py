@@ -276,7 +276,7 @@ def make_low_rank(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, default="llama2-7b-chat-hf")
+    parser.add_argument("--model", type=str, default="Llama-3.1-8B-Instruct")
 
     parser.add_argument(
         "--seed", type=int, default=0, help="Seed for sampling the calibration data."
@@ -329,6 +329,7 @@ if __name__ == "__main__":
     sanity_check = True
     modeltype2path = {
         "llama2-7b-chat-hf": "meta-llama/Llama-2-7b-chat-hf",
+        "Llama-3.1-8B-Instruct": "meta-llama/Llama-3.1-8B-Instruct",
     }
 
     def get_llm(model_name, cache_dir="llm_weights"):
