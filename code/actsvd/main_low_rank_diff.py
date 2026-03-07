@@ -320,6 +320,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--eval_zero_shot", action="store_true")
     parser.add_argument("--eval_attack", action="store_true")
+    parser.add_argument("--eval_ppl", action="store_true")
 
     args = parser.parse_args()
     setattr(args, "disentangle", True)
@@ -370,30 +371,33 @@ if __name__ == "__main__":
 
     # evaluation begin
 
-    ppl_test = eval_ppl(args, model, tokenizer, device)
-    print(f"wikitext perplexity {ppl_test}")
+    if args.eval_ppl:
+        ppl_test = eval_ppl(args, model, tokenizer, device)
+        print(f"wikitext perplexity {ppl_test}")
 
-    if not os.path.exists(args.save):
-        os.makedirs(args.save)
-    save_filepath = os.path.join(args.save, f"log.txt")
-    save_attackpath = os.path.join(args.save, f"attack_{args.rank_pos}_{args.rank_neg}")
-    if not os.path.exists(save_attackpath):
-        os.makedirs(save_attackpath)
-    if not os.path.exists(save_filepath):
-        with open(save_filepath, "w") as f:
-            print("rank\tINST\tmetric\tscore", file=f, flush=True)
-            print(
-                f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\tPPL\t{ppl_test:.4f}",
-                file=f,
-                flush=True,
-            )
-    else:
-        with open(save_filepath, "a") as f:
-            print(
-                f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\tPPL\t{ppl_test:.4f}",
-                file=f,
-                flush=True,
-            )
+        if not os.path.exists(args.save):
+            os.makedirs(args.save)
+        save_filepath = os.path.join(args.save, f"log.txt")
+        save_attackpath = os.path.join(
+            args.save, f"attack_{args.rank_pos}_{args.rank_neg}"
+        )
+        if not os.path.exists(save_attackpath):
+            os.makedirs(save_attackpath)
+        if not os.path.exists(save_filepath):
+            with open(save_filepath, "w") as f:
+                print("rank\tINST\tmetric\tscore", file=f, flush=True)
+                print(
+                    f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\tPPL\t{ppl_test:.4f}",
+                    file=f,
+                    flush=True,
+                )
+        else:
+            with open(save_filepath, "a") as f:
+                print(
+                    f"{args.rank_pos}_{args.rank_neg}\t{args.alpha}\tPPL\t{ppl_test:.4f}",
+                    file=f,
+                    flush=True,
+                )
 
     if args.eval_attack:
         # note: since vLLM only supports loading from the path, we need to save the pruned model first for faster evaluation. We can reuse this temp folder to save disk spaces
