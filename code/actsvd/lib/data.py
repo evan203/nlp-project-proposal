@@ -124,3 +124,5 @@ def get_loaders(
         return get_align(
             nsamples, seed, seqlen, tokenizer, disentangle=disentangle, mode="short"
         )
+    else:
+        raise NotImplementedError(f"Dataset {name} not supported")

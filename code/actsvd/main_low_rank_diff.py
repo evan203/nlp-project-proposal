@@ -132,8 +132,8 @@ def make_low_rank(
     model,
     tokenizer,
     device=torch.device("cuda:0"),
-    prune_data_pos="wikitext",
-    prune_data_neg="wikitext",
+    prune_data_pos="alpaca_cleaned_no_safety",
+    prune_data_neg="align",
 ):
     """
     prune_data_pos: retain most useful (total_rank - rank_pos) ranks
@@ -302,7 +302,10 @@ if __name__ == "__main__":
         "none",
     ]
     parser.add_argument(
-        "--prune_data_pos", type=str, choices=data_choices, default="misalign"
+        "--prune_data_pos",
+        type=str,
+        choices=data_choices,
+        default="alpaca_cleaned_no_safety",
     )
     parser.add_argument(
         "--prune_data_neg", type=str, choices=data_choices, default="align"
