@@ -10,6 +10,7 @@ from lib.data import get_loaders
 from lib.eval import eval_ppl, eval_zero_shot, eval_attack
 from functools import reduce
 from vllm import LLM
+from tqdm import trange
 
 # import numpy as np
 # from typing import Optional
@@ -174,7 +175,7 @@ def make_low_rank(
 
     num_hidden_layers = model.config.num_hidden_layers
 
-    for layer in range(num_hidden_layers):
+    for layer in trange(num_hidden_layers):
         layer_filter_fn = lambda x: (
             f"layers.{layer}." in x
         )  ### TODO # hack for llama series
