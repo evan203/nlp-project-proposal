@@ -282,8 +282,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--seed", type=int, default=0, help="Seed for sampling the calibration data."
     )
-    parser.add_argument("--rank_pos", type=int, default=1024)
-    parser.add_argument("--rank_neg", type=int, default=1024)
+    parser.add_argument("--rank_pos", type=int, default=3000)
+    parser.add_argument("--rank_neg", type=int, default=4000)
     parser.add_argument("--niter", type=int, default=20)
     parser.add_argument(
         "--nsamples", type=int, default=128, help="Number of calibration samples."
