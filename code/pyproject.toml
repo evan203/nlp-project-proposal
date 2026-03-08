@@ -16,6 +16,11 @@ dependencies = [
     "jaxtyping",
     "matplotlib",
     "litellm",
+    "zstandard>=0.25.0",
+    "nnsight==0.3.7",
+    "strong-reject",
+    "wandb>=0.25.0",
+    "seaborn>=0.13.2",
 ]
 
 
@@ -29,6 +34,7 @@ explicit = true
 [tool.uv.sources]
 torch = { index = "pytorch-cu130" }
 torchvision = { index = "pytorch-cu130" }
+strong-reject = { git = "https://github.com/dsbowen/strong_reject.git", rev = "main" }
 
 # vllm will take minutes to build from source every time you `uv run` if we don't get this url.
 # in case it stops working, here's how to generate it

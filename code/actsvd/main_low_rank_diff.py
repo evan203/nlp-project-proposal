@@ -234,8 +234,9 @@ def make_low_rank(
                 score_p = (
                     activation_norms_p @ module.base.weight.data.T
                 )  # (size * d_in) @ (d_out * d_in).T --> (size, d_out)
+                q_pos = max(1, min(total_rank - args.rank_pos, total_rank - 1, score_p.shape[0] - 1))
                 _, _, Vp = torch.svd_lowrank(
-                    score_p.float(), q=total_rank - args.rank_pos, niter=args.niter
+                    score_p.float(), q=q_pos, niter=args.niter
                 )  # (size, r) (r) (d_out, r)
                 Vp_proj = (Vp @ Vp.T).type(
                     module.base.weight.data.dtype
@@ -247,8 +248,9 @@ def make_low_rank(
                 score_n = (
                     activation_norms_n @ module.base.weight.data.T
                 )  # (size * d_in) @ (d_out * d_in).T --> (size, d_out)
+                q_neg = max(1, min(total_rank - args.rank_neg, total_rank - 1, score_n.shape[0] - 1))
                 _, _, Vn = torch.svd_lowrank(
-                    score_n.float(), q=total_rank - args.rank_neg, niter=args.niter
+                    score_n.float(), q=q_neg, niter=args.niter
                 )  # (size, r) (r) (d_out, r)
                 Vn_proj = (Vn @ Vn.T).type(
                     module.base.weight.data.dtype

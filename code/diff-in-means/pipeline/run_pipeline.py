@@ -185,6 +185,15 @@ def run_pipeline(model_path):
     evaluate_loss_for_datasets(cfg, model_base, ablation_fwd_pre_hooks, ablation_fwd_hooks, 'ablation')
     evaluate_loss_for_datasets(cfg, model_base, actadd_fwd_pre_hooks, actadd_fwd_hooks, 'actadd')
 
+    # 6. Save modified model with refusal direction orthogonalized out of weights
+    save_path = os.path.join(cfg.artifact_path(), "modified_model")
+    print(f"Applying orthogonalization to model weights and saving to {save_path}...")
+    orthogonalization_fn = model_base._get_orthogonalization_mod_fn(direction)
+    orthogonalization_fn(model_base.model)
+    model_base.model.save_pretrained(save_path)
+    model_base.tokenizer.save_pretrained(save_path)
+    print(f"Modified model saved to {save_path}")
+
 if __name__ == "__main__":
     args = parse_arguments()
     run_pipeline(model_path=args.model_path)
