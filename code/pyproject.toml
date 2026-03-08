@@ -15,6 +15,7 @@ dependencies = [
     "tqdm",
     "jaxtyping",
     "matplotlib",
+    "litellm",
 ]
 
 
