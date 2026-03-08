@@ -5,8 +5,8 @@ Current status:
 - can prune low ranks (w orthogonal projection) using ActSVD:
   - `cd actsvd`
   - `uv run main_low_rank_diff.py`
-    - on RTX 3090, takes approx 40 mins for default model: llama-3.1-8B-instruct
-  - `uv run chat.py` to test the jailbroken model
+    - on RTX 3090, takes approx 16 mins for default model: llama-3.1-8B-instruct
+  - `cd .. && uv run chat.py --model_path actsvd/out` to test the jailbroken model
 - can run difference in means:
   - `cd diff-in-means`
   - `uv run python -m pipeline.run_pipeline --model_path 'meta-llama/Llama-3.1-8B-Instruct'`
@@ -17,3 +17,4 @@ Current status:
   - `cd .. && uv run chat.py --model_path diff-in-means/pipeline/runs/Llama-3.1-8B-Instruct/modified_model` to test the jailbroken model
   - if `TOGETHER_API_KEY` is set, jailbreakbench LlamaGuard2 evaluation will also run automatically
 - can run cones / representational independence (cones-repind):
+
