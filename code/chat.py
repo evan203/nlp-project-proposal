@@ -15,7 +15,7 @@ def chat(model_path, tokenizer_path=None, system_prompt=None):
         torch_dtype=torch.bfloat16,
         device_map="cuda",
     )
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, fix_mistral_regex=True)
 
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -48,6 +48,7 @@ def chat(model_path, tokenizer_path=None, system_prompt=None):
             text = f"User: {user_input}\nAssistant:"
 
         inputs = tokenizer(text, return_tensors="pt").to(model.device)
+        input_length = inputs.input_ids.shape[1]
 
         outputs = model.generate(
             **inputs,
@@ -55,16 +56,15 @@ def chat(model_path, tokenizer_path=None, system_prompt=None):
             temperature=0.7,
             top_p=0.9,
             do_sample=True,
+            eos_token_id=[
+                tokenizer.eos_token_id,
+                tokenizer.convert_tokens_to_ids("<|eot_id|>"),
+            ],
         )
 
-        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-        if has_chat_template:
-            # Extract only the model's response
-            response = response[len(text) :].strip()
-        else:
-            # Fallback extraction
-            response = response[len(text) :].strip()
+        # Slice the tensor directly to avoid string length mismatches
+        generated_tokens = outputs[0][input_length:]
+        response = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
 
         print(f"Assistant: {response}\n")
 
