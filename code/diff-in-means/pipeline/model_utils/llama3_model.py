@@ -97,8 +97,9 @@ class Llama3Model(ModelBase):
 
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
-            torch_dtype=dtype,
+            dtype=dtype,
             trust_remote_code=True,
+            cache_dir="llm_weights"
             device_map="auto",
         ).eval()
 
