@@ -152,11 +152,14 @@ one-dimensional safety subspace.
 
 *ActSVD Safety and Utility Ranks.* Following #citet("Wei2024Brittleness"), we perform
 Singular Value Decomposition on the product of model weights and input
-activations $W X_"in"$ for both safety and utility calibration datasets. This
-yields orthogonal projection matrices $Pi^s$ and $Pi^u$ onto the top safety and
-utility rank subspaces, respectively. To disentangle safety from utility, we
-compute the isolated safety projection:
-$Delta W(r^u, r^s) = (I - Pi^u) Pi^s W$.
+activations $W X_"in"$ for both safety and utility calibration datasets,
+yielding $U S V^top approx W X_"in"$. The orthogonal projection matrices
+$Pi^s = U^s (U^s)^top$ and $Pi^u = U^u (U^u)^top$ project onto the top $r^s$
+safety and top $r^u$ utility rank subspaces, respectively. To disentangle
+safety from utility, we compute the isolated safety projection:
+$Delta W(r^u, r^s) = (I - Pi^u) Pi^s W$. While Wei et al. evaluate on
+Llama-2 7B/13B, the method operates on generic linear layers and transfers
+directly to Llama-3.1 8B.
 
 *Refusal Cone Optimization (RCO).* Following #citet("pmlr-v267-wollschlager25a"), we
 use gradient-based optimization to discover multiple refusal directions that
@@ -167,16 +170,16 @@ ablation that bypasses refusal on harmful prompts while preserving behavior on
 harmless prompts. A retain loss based on KL divergence ensures minimal side
 effects on harmless inputs.
 
-*Neuron-Level Attribution (Wanda/SNIP).* Following #citet("Wei2024Brittleness"), we
-complement the rank-level analysis with neuron-level safety attribution. Using
-the Wanda importance score, we compute per-neuron scores
-$I(W) = |W| dot.circle (bold(1) dot ||X_"in"||_2^top)$ on both safety and
-utility calibration sets. We then isolate safety-critical neurons via set
-difference: for sparsity levels $(p%, q%)$, the safety-critical neuron set is
-$S(p,q) = S^s (q) \ S^u (p)$, retaining neurons important for safety but not
-for utility. Comparing the sparsity and overlap of safety-critical neurons with
-safety-critical ranks provides a finer-grained view of how safety is
-distributed across the model's architecture.
+// *Neuron-Level Attribution (Wanda/SNIP).* Following #citet("Wei2024Brittleness"), we
+// complement the rank-level analysis with neuron-level safety attribution. Using
+// the Wanda importance score, we compute per-neuron scores
+// $I(W) = |W| dot.circle (bold(1) dot ||X_"in"||_2^top)$ on both safety and
+// utility calibration sets. We then isolate safety-critical neurons via set
+// difference: for sparsity levels $(p%, q%)$, the safety-critical neuron set is
+// $S(p,q) = S^s (q) \ S^u (p)$, retaining neurons important for safety but not
+// for utility. Comparing the sparsity and overlap of safety-critical neurons with
+// safety-critical ranks provides a finer-grained view of how safety is
+// distributed across the model's architecture.
 
 == Subspace Comparison
 
@@ -199,23 +202,29 @@ MSO ranges from 0 (orthogonal subspaces) to 1 (identical spans). We compute MSO
 for all pairwise combinations of safety subspaces (DIM vs ActSVD, DIM vs RCO,
 ActSVD vs RCO) to assess cross-method agreement, and between each safety
 subspace and the ActSVD utility subspace to quantify safety--utility
-entanglement. The method yielding the lowest safety--utility MSO identifies the
+entanglement. Because DIM yields a single direction while ActSVD and RCO yield
+multi-dimensional subspaces, cross-method MSO involving DIM will be bounded by
+the dimensionality asymmetry; we report the random baseline
+$EE["overlap"] = max(k_V, k_W) slash d$ alongside each MSO value for
+calibration. The method yielding the lowest safety--utility MSO identifies the
 most separable safety representation.
 
 *Representational Independence (RepInd).* Following
-#citet("pmlr-v267-wollschlager25a"), RepInd tests whether two directions are
-_causally_ related, not merely geometrically similar. Two directions are
-representationally independent if ablating one does not change the effect of
-the other on model behavior. This is measured by comparing the per-layer cosine
-similarity profile of a direction before and after ablating the other direction.
-MSO may report high geometric overlap between directions that turn out to be
-causally independent, or low overlap between directions that are causally
-entangled via non-linear interactions across layers. We apply RepInd between
-the safety directions from each extraction method (e.g., DIM's refusal vector
-vs RCO's cone directions) to test whether they capture the same or different
-causal mechanisms, and between safety directions and utility-critical directions
-to assess whether safety can be ablated without functionally disrupting
-utility.
+#citet("pmlr-v267-wollschlager25a"), RepInd tests whether two individual directions are
+_causally_ related, not merely geometrically similar. Two directions
+$lambda, mu in RR^d$ are representationally independent if ablating one does
+not change the cosine similarity profile of the other across layers:
+$ forall l in L: cos(bold(x)^((l)), lambda) = cos(tilde(bold(x))_("abl"(mu))^((l)), lambda) $
+and vice versa. MSO may report high geometric overlap between directions that
+turn out to be causally independent, or low overlap between directions that are
+causally entangled via non-linear interactions across layers. Because RepInd
+operates on individual direction vectors, we apply it directly between DIM's
+refusal vector and each RCO cone basis vector. For ActSVD, which produces a
+projection matrix $Pi^s = U^s (U^s)^top$ rather than individual directions, we
+test RepInd on its top singular vectors $bold(u)_1^s, bold(u)_2^s, dots$
+against directions from DIM and RCO. We also test RepInd between safety
+directions and utility-critical directions to assess whether safety can be
+ablated without functionally disrupting utility.
 
 = Data Sets
 
