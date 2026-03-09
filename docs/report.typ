@@ -131,7 +131,91 @@ subspace within LLMs.
 
 = Methodology
 
-#lorem(80)
+Our methodology consists of two phases: (1) identifying safety and utility
+subspaces using multiple methods, and (2) comparing these subspaces to
+quantify their overlap. All experiments target Llama-3.1-Instruct 8B.
+
+== Safety Subspace Identification
+
+We implement three complementary methods for extracting safety-relevant
+subspaces from the model's internal representations.
+
+*Difference-in-Means (DIM).* Following #citet("arditi2024"), we compute the mean
+residual stream activations at each layer $l$ and post-instruction token
+position $i$ for sets of harmful and harmless prompts. The difference-in-means
+vector is $bold(r)_i^((l)) = bold(mu)_i^((l)) - bold(v)_i^((l))$, where
+$bold(mu)$ and $bold(v)$ are the mean activations over harmful and harmless
+prompts, respectively. We select the single most effective vector $hat(bold(r))$
+by evaluating each candidate's ability to bypass refusal when ablated and to
+induce refusal when added. The selected unit-norm vector defines a
+one-dimensional safety subspace.
+
+*ActSVD Safety and Utility Ranks.* Following #citet("Wei2024Brittleness"), we perform
+Singular Value Decomposition on the product of model weights and input
+activations $W X_"in"$ for both safety and utility calibration datasets. This
+yields orthogonal projection matrices $Pi^s$ and $Pi^u$ onto the top safety and
+utility rank subspaces, respectively. To disentangle safety from utility, we
+compute the isolated safety projection:
+$Delta W(r^u, r^s) = (I - Pi^u) Pi^s W$.
+
+*Refusal Cone Optimization (RCO).* Following #citet("pmlr-v267-wollschlager25a"), we
+use gradient-based optimization to discover multiple refusal directions that
+together form a multi-dimensional conic region. The optimization minimizes a
+composite loss encoding two properties: (1) monotonic scaling of refusal
+probability with the magnitude of activation addition, and (2) surgical
+ablation that bypasses refusal on harmful prompts while preserving behavior on
+harmless prompts. A retain loss based on KL divergence ensures minimal side
+effects on harmless inputs.
+
+*Neuron-Level Attribution (Wanda/SNIP).* Following #citet("Wei2024Brittleness"), we
+complement the rank-level analysis with neuron-level safety attribution. Using
+the Wanda importance score, we compute per-neuron scores
+$I(W) = |W| dot.circle (bold(1) dot ||X_"in"||_2^top)$ on both safety and
+utility calibration sets. We then isolate safety-critical neurons via set
+difference: for sparsity levels $(p%, q%)$, the safety-critical neuron set is
+$S(p,q) = S^s (q) \ S^u (p)$, retaining neurons important for safety but not
+for utility. Comparing the sparsity and overlap of safety-critical neurons with
+safety-critical ranks provides a finer-grained view of how safety is
+distributed across the model's architecture.
+
+== Subspace Comparison
+
+Our comparison phase addresses two questions. First, _cross-method
+consistency_: do DIM, ActSVD, and RCO converge on similar safety-relevant
+features, or does each capture a distinct aspect of the safety mechanism?
+Second, _safety--utility separability_: for each extraction method, how much
+does its identified safety subspace overlap with the utility subspace, and which
+method yields the most cleanly separable safety representation? We apply two
+metrics that capture complementary aspects of subspace relationships.
+
+*Mode Subspace Overlap (MSO).* Following #citet("Ponkshe2026Safety"), MSO
+measures the geometric overlap between two subspaces. For two matrices
+$bold(V)$ and $bold(W)$, we extract their principal directions via thin SVD and
+select the smallest number of left singular vectors capturing an
+$eta$-fraction of the energy. The MSO metric is defined as:
+$ "MSO"(bold(V), bold(W); eta) = (||S||_F^2) / min(k_V, k_W) $
+where $S = Q_V^top Q_W$ is the overlap matrix between the orthonormal bases.
+MSO ranges from 0 (orthogonal subspaces) to 1 (identical spans). We compute MSO
+for all pairwise combinations of safety subspaces (DIM vs ActSVD, DIM vs RCO,
+ActSVD vs RCO) to assess cross-method agreement, and between each safety
+subspace and the ActSVD utility subspace to quantify safety--utility
+entanglement. The method yielding the lowest safety--utility MSO identifies the
+most separable safety representation.
+
+*Representational Independence (RepInd).* Following
+#citet("pmlr-v267-wollschlager25a"), RepInd tests whether two directions are
+_causally_ related, not merely geometrically similar. Two directions are
+representationally independent if ablating one does not change the effect of
+the other on model behavior. This is measured by comparing the per-layer cosine
+similarity profile of a direction before and after ablating the other direction.
+MSO may report high geometric overlap between directions that turn out to be
+causally independent, or low overlap between directions that are causally
+entangled via non-linear interactions across layers. We apply RepInd between
+the safety directions from each extraction method (e.g., DIM's refusal vector
+vs RCO's cone directions) to test whether they capture the same or different
+causal mechanisms, and between safety directions and utility-critical directions
+to assess whether safety can be ablated without functionally disrupting
+utility.
 
 = Data Sets
 
