@@ -8,7 +8,7 @@
 
 
 
-#show: doc => acl(doc, anonymous: false, title: [(insert project title)], authors: make-authors(
+#show: doc => acl(doc, anonymous: false, title: [Examining the Superposition of Safety and Utility in LLM Activation Spaces], authors: make-authors(
   (
     name: "Evan Scamehorn",
     affiliation: [University of Wisconsin\ #email("scamehorn@wisc.edu")],
