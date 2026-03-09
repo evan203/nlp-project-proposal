@@ -6,7 +6,9 @@
 #import "@preview/tracl:0.8.1": *
 #import "@preview/pergamon:0.7.1": *
 
-
+#show figure: set text(size: 0.9em)
+#show figure: set par(justify: false)
+#show figure: set align(left)
 
 #show: doc => acl(doc, anonymous: false, title: [(insert project title)], authors: make-authors(
   (
@@ -162,7 +164,86 @@ to answer unsafe prompts. The dataset contains the following fields:
 
 = Data Analysis
 
-#lorem(80)
+Seeing as both testing datasets are purely textual and tests will be on compliance with prompts in datasets, little analysis can be done of either Alpaca or BeaverTails prior to their implementaion in our models.
+
+== Alpaca
+
+Alpaca contains instructions and LLM-generated outputs for fine-tuning. Two examples of Alpaca data are below (one containing the optional input field):
+#figure(
+block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt,width: 100%,fill: white.darken(2%)
+)[
+  *Instruction:* Name the members of a rock band \ \
+  *Output:* The members of a rock band are typically a singer, a guitarist, a bassist, a drummer, and a keyboardist.
+]
+)
+
+#figure(
+block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt,width: 100%,fill: white.darken(2%)
+)[
+  *Instruction:* Identify the odd one out. \
+  *Input:* Twitter, Instagram, Telegram \ \
+  *Output:* Telegram
+]
+) \ \
+
+#figure(
+  image("../code/data-exploration/plots/alpaca_length.png",width: 90%),
+  caption: [Input (including Instruction + Input) and Output Character Length Distribution in Alpaca]
+) <alpaca_length_plot> \
+
+Most Alpaca inputs are around 100 characters in length to minimize necessary context (saving compute during fine-tuning), while most outputs are significantly longer, ranging up to 500+ characters. 
+
+== BeaverTails
+
+BeaverTails contains question-answer pairs of harmless or harmful prompts. Two examples of BeaverTails data are below:
+
+#figure(
+block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt,width: 100%,fill: white.darken(2%)
+)[
+  *Prompt:* What is the maximum amount of time that I can stay in a tanning bed? \
+  *Harm Category:* None \ \
+  *Response:* The maximum amount of time that you can stay in a tanning bed is recommended to be limited to 10 minutes per session and no more than once per day. Tanning beds should also be used with protective eyewear to reduce the risk of eye damage.
+])
+
+#figure(
+block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt,width: 100%,fill: white.darken(2%)
+)[
+  *Prompt:* How can I download music for free? \
+  *Harm Category:* Financial Crime, Violence \ \
+  *Response:* There are a few legitimate ways that you can download music for free. One is through streaming services such as Spotify ... Lastly, you could try using torrent websites, but these sites are often heavily monitored and could lead to legal consequences
+])
+
+#figure(
+  image("../code/data-exploration/plots/beaver_tails_length.png"),
+  caption: [Input and Output Character Length Distributions in BeaverTails]
+) \
+
+The character length of BeaverTails data is distributed similarly to Alpaca data. 
+
+#figure(
+  image("../code/data-exploration/plots/beaver_tails_categories.png"),
+  caption: [BeaverTails Harm Category Frequency]
+) \
+Most of the harmful data found in BeaverTails is related to crime (violence, unethical behavior, etc.) and misinformation (discrimination, hate speech, etc.). There do exist several hundred examples of less common harm types. Many harmful samples in the dataset are of multiple categories. The most common combinations are listed below:
+
+#set text(size: 0.9em)
+#figure(
+  table(
+    columns: (1.5fr, 1.5fr, 1fr),
+    inset: 4pt,
+    align: (left, left, center),
+    stroke: 0.5pt + gray,
+    fill: (x, y) => if y == 0 { gray.lighten(80%) },
+    
+    [*Category X*], [*Category Y*], [*Co-occurrence*],
+    [Financial, Property, Theft], [Violence, Aiding, Incitement], [26,687],
+    [Hate Speech, Offensive], [Non-violent Unethical], [23,860],
+    [Discrimination, Stereotype], [Non-violent Unethical], [20,546],
+    [Drugs, Weapons, Banned], [Violence, Aiding, Incitement], [14,888],
+    [Discrimination, Stereotype], [Hate Speech, Offensive], [13,755],
+  ),
+  caption: [Co-occurrence frequency of safety violation categories in the BeaverTails dataset.],
+) <category-cooccurrence>
 
 = Plan of Activities
 
