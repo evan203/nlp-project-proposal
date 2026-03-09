@@ -87,15 +87,15 @@ capacity and are not linearly distinct.
 
 #v(1em)
 
-#citet("Ponkshe2026Safety") demonstrates fundamental mathematical limitations of linear subspace-based 
-safety defenses, arguing that safety is not linearly separable from utility. Removing 
-any specific safety-related subspace inherently degrades the overall performance of the model. 
-The authors support this hypothesis through a series of empirical evaluations. Using 
-singular value decomposition and mode subspace overlap, the study reveals that the 
-principal directions amplifying safe behaviors also amplify useful ones, indicating that 
-these directions do not constitute a distinctly separable safety subspace. Furthermore, 
-attempts to mitigate harmful behaviors via orthogonal projection resulted in a proportional 
-drop in the model's utility. The researchers also found that providing the model with helpful 
+#citet("Ponkshe2026Safety") demonstrates fundamental mathematical limitations of linear subspace-based
+safety defenses, arguing that safety is not linearly separable from utility. Removing
+any specific safety-related subspace inherently degrades the overall performance of the model.
+The authors support this hypothesis through a series of empirical evaluations. Using
+singular value decomposition and mode subspace overlap, the study reveals that the
+principal directions amplifying safe behaviors also amplify useful ones, indicating that
+these directions do not constitute a distinctly separable safety subspace. Furthermore,
+attempts to mitigate harmful behaviors via orthogonal projection resulted in a proportional
+drop in the model's utility. The researchers also found that providing the model with helpful
 and harmful inputs produced highly overlapping activations. Collectively, these findings further
 challenge the hypothesis that safety and utility operate within linearly separable subspaces.
 
@@ -143,7 +143,22 @@ subspace within LLMs.
 
 = Plan of Activities
 
-#lorem(80)
+We plan to complete our research in four two-week sprints:
++ [3/9-3/23] Replication of Existing Results
++ [3/23-4/6] Analysis
++ [4/6-4/20] Follow-up Analysis and Validation
++ [4/20-5/4] Wrap-Up
+
+During Sprint 1, we will replicate existing methods: difference-in-means, ActSVD, and Refusal Cone Optimization.
+In parallel with this, we will write code for our planned analysis comparing these methodologies.
+Evan and Kyle will handle reimplementing existing results. Adam, Calvin, and Zeke will begin work on writing code for analysis.
+
+In Sprint 2, we will finish writing the analysis code started during Sprint 1, and run it.
+
+Sprint 3 will be used as a chance investigate any questions or new directions that come up as a result of the analysis in Sprint 2.
+This will also be used for validation of Sprint 2 results.
+
+Sprint 4 will be used for all wrap-up activities, including writing our final report and preparing our final presentation. All group members will contribute to this.
 
 #add-bib-resource(read("bibliography.bib"))
 #print-acl-bibliography()
