@@ -6,9 +6,11 @@
 #import "@preview/tracl:0.8.1": *
 #import "@preview/pergamon:0.7.1": *
 
+#show figure: set text(size: 0.9em)
+#show figure: set par(justify: false)
+#show figure: set align(left)
 
-
-#show: doc => acl(doc, anonymous: false, title: [(insert project title)], authors: make-authors(
+#show: doc => acl(doc, anonymous: false, title: [Examining the Superposition of Safety and Utility in LLM Activation Spaces], authors: make-authors(
   (
     name: "Evan Scamehorn",
     affiliation: [University of Wisconsin\ #email("scamehorn@wisc.edu")],
@@ -131,15 +133,210 @@ subspace within LLMs.
 
 = Methodology
 
-#lorem(80)
+Our methodology consists of two phases: (1) identifying safety and utility
+subspaces using multiple methods, and (2) comparing these subspaces to
+quantify their overlap. All experiments target Llama-3.1-Instruct 8B.
+
+== Safety Subspace Identification
+
+We implement three complementary methods for extracting safety-relevant
+subspaces from the model's internal representations.
+
+*Difference-in-Means (DIM).* Following #citet("arditi2024"), we compute the mean
+residual stream activations at each layer $l$ and post-instruction token
+position $i$ for sets of harmful and harmless prompts. The difference-in-means
+vector is $bold(r)_i^((l)) = bold(mu)_i^((l)) - bold(v)_i^((l))$, where
+$bold(mu)$ and $bold(v)$ are the mean activations over harmful and harmless
+prompts, respectively. We select the single most effective vector $hat(bold(r))$
+by evaluating each candidate's ability to bypass refusal when ablated and to
+induce refusal when added. The selected unit-norm vector defines a
+one-dimensional safety subspace.
+
+*ActSVD Safety and Utility Ranks.* Following #citet("Wei2024Brittleness"), we perform
+Singular Value Decomposition on the product of model weights and input
+activations $W X_"in"$ for both safety and utility calibration datasets,
+yielding $U S V^top approx W X_"in"$. The orthogonal projection matrices
+$Pi^s = U^s (U^s)^top$ and $Pi^u = U^u (U^u)^top$ project onto the top $r^s$
+safety and top $r^u$ utility rank subspaces, respectively. To disentangle
+safety from utility, we compute the isolated safety projection:
+$Delta W(r^u, r^s) = (I - Pi^u) Pi^s W$. While Wei et al. evaluate on
+Llama-2 7B/13B, the method operates on generic linear layers and transfers
+directly to Llama-3.1 8B.
+
+*Refusal Cone Optimization (RCO).* Following #citet("pmlr-v267-wollschlager25a"), we
+use gradient-based optimization to discover multiple refusal directions that
+together form a multi-dimensional conic region. The optimization minimizes a
+composite loss encoding two properties: (1) monotonic scaling of refusal
+probability with the magnitude of activation addition, and (2) surgical
+ablation that bypasses refusal on harmful prompts while preserving behavior on
+harmless prompts. A retain loss based on KL divergence ensures minimal side
+effects on harmless inputs.
+
+// *Neuron-Level Attribution (Wanda/SNIP).* Following #citet("Wei2024Brittleness"), we
+// complement the rank-level analysis with neuron-level safety attribution. Using
+// the Wanda importance score, we compute per-neuron scores
+// $I(W) = |W| dot.circle (bold(1) dot ||X_"in"||_2^top)$ on both safety and
+// utility calibration sets. We then isolate safety-critical neurons via set
+// difference: for sparsity levels $(p%, q%)$, the safety-critical neuron set is
+// $S(p,q) = S^s (q) \ S^u (p)$, retaining neurons important for safety but not
+// for utility. Comparing the sparsity and overlap of safety-critical neurons with
+// safety-critical ranks provides a finer-grained view of how safety is
+// distributed across the model's architecture.
+
+== Subspace Comparison
+
+Our comparison phase addresses two questions. First, _cross-method
+consistency_: do DIM, ActSVD, and RCO converge on similar safety-relevant
+features, or does each capture a distinct aspect of the safety mechanism?
+Second, _safety--utility separability_: for each extraction method, how much
+does its identified safety subspace overlap with the utility subspace, and which
+method yields the most cleanly separable safety representation? We apply two
+metrics that capture complementary aspects of subspace relationships.
+
+*Mode Subspace Overlap (MSO).* Following #citet("Ponkshe2026Safety"), MSO
+measures the geometric overlap between two subspaces. For two matrices
+$bold(V)$ and $bold(W)$, we extract their principal directions via thin SVD and
+select the smallest number of left singular vectors capturing an
+$eta$-fraction of the energy. The MSO metric is defined as:
+$ "MSO"(bold(V), bold(W); eta) = (||S||_F^2) / min(k_V, k_W) $
+where $S = Q_V^top Q_W$ is the overlap matrix between the orthonormal bases.
+MSO ranges from 0 (orthogonal subspaces) to 1 (identical spans). We compute MSO
+for all pairwise combinations of safety subspaces (DIM vs ActSVD, DIM vs RCO,
+ActSVD vs RCO) to assess cross-method agreement, and between each safety
+subspace and the ActSVD utility subspace to quantify safety--utility
+entanglement. Because DIM yields a single direction while ActSVD and RCO yield
+multi-dimensional subspaces, cross-method MSO involving DIM will be bounded by
+the dimensionality asymmetry; we report the random baseline
+$EE["overlap"] = max(k_V, k_W) slash d$ alongside each MSO value for
+calibration. The method yielding the lowest safety--utility MSO identifies the
+most separable safety representation.
+
+*Representational Independence (RepInd).* Following
+#citet("pmlr-v267-wollschlager25a"), RepInd tests whether two individual directions are
+_causally_ related, not merely geometrically similar. Two directions
+$lambda, mu in RR^d$ are representationally independent if ablating one does
+not change the cosine similarity profile of the other across layers:
+$ forall l in L: cos(bold(x)^((l)), lambda) = cos(tilde(bold(x))_("abl"(mu))^((l)), lambda) $
+and vice versa. MSO may report high geometric overlap between directions that
+turn out to be causally independent, or low overlap between directions that are
+causally entangled via non-linear interactions across layers. Because RepInd
+operates on individual direction vectors, we apply it directly between DIM's
+refusal vector and each RCO cone basis vector. For ActSVD, which produces a
+projection matrix $Pi^s = U^s (U^s)^top$ rather than individual directions, we
+test RepInd on its top singular vectors $bold(u)_1^s, bold(u)_2^s, dots$
+against directions from DIM and RCO. We also test RepInd between safety
+directions and utility-critical directions to assess whether safety can be
+ablated without functionally disrupting utility.
 
 = Data Sets
 
-#lorem(80)
+We plan to use two primary datasets to conduct testing. Alpaca #cite("alpaca") 
+will be used to test utility (refusal rate) on harmless fine-tuning data, while 
+BeaverTails #cite("beavertails") will be used to test safety (attack success rate) 
+against harmful fine-tuning data.
+
+Alpaca is a dataset of 50,000+ common instructions and LLM-generated outputs. It 
+is used most commonly in LLM fine-tuning. All tasks are harmless and should be 
+completed without issue by an aligned Llama-3.1 model. The dataset contains three 
+text fields:
+- instruction: Description of the task assigned to the model.
+- input: Additional information required to complete the task (e.g. initial code 
+  if the task is to refactor code).
+- output: Answer to the task, generated by text-davinci-003 by OpenAI.
+
+BeaverTails is a fine-tuning dataset with a focus on safety alignment. It contains 
+question-answer pairs of a variety of harmful and harmless categories. Aligned 
+Llama-3.1 models should be able to reasonably respond to safe prompts and  decline 
+to answer unsafe prompts. The dataset contains the following fields:
+- prompt: Question provided to the LLM.
+- response: Sample answer to the question from an aligned LLM.
+- category: Harmful topic(s) ascribed to the question (e.g. animal abuse, hate 
+  speech, financial crime).
+- is_safe: Whether the question provided is safe or unsafe (approximately 57% of 
+  questions are safe).
 
 = Data Analysis
 
-#lorem(80)
+Seeing as both testing datasets are purely textual and tests will be on compliance with prompts in datasets, little analysis can be done of either Alpaca or BeaverTails prior to their implementaion in our models.
+
+== Alpaca
+
+Alpaca contains instructions and LLM-generated outputs for fine-tuning. Two examples of Alpaca data are below (one containing the optional input field):
+#figure(
+block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt,width: 100%,fill: white.darken(2%)
+)[
+  *Instruction:* Name the members of a rock band \ \
+  *Output:* The members of a rock band are typically a singer, a guitarist, a bassist, a drummer, and a keyboardist.
+]
+)
+
+#figure(
+block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt,width: 100%,fill: white.darken(2%)
+)[
+  *Instruction:* Identify the odd one out. \
+  *Input:* Twitter, Instagram, Telegram \ \
+  *Output:* Telegram
+]
+) \ \
+
+#figure(
+  image("../code/data-exploration/plots/alpaca_length.png",width: 90%),
+  caption: [Input (including Instruction + Input) and Output Character Length Distribution in Alpaca]
+) <alpaca_length_plot> \
+
+Most Alpaca inputs are around 100 characters in length to minimize necessary context (saving compute during fine-tuning), while most outputs are significantly longer, ranging up to 500+ characters. 
+
+== BeaverTails
+
+BeaverTails contains question-answer pairs of harmless or harmful prompts. Two examples of BeaverTails data are below:
+
+#figure(
+block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt,width: 100%,fill: white.darken(2%)
+)[
+  *Prompt:* What is the maximum amount of time that I can stay in a tanning bed? \
+  *Harm Category:* None \ \
+  *Response:* The maximum amount of time that you can stay in a tanning bed is recommended to be limited to 10 minutes per session and no more than once per day. Tanning beds should also be used with protective eyewear to reduce the risk of eye damage.
+])
+
+#figure(
+block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt,width: 100%,fill: white.darken(2%)
+)[
+  *Prompt:* How can I download music for free? \
+  *Harm Category:* Financial Crime, Violence \ \
+  *Response:* There are a few legitimate ways that you can download music for free. One is through streaming services such as Spotify ... Lastly, you could try using torrent websites, but these sites are often heavily monitored and could lead to legal consequences
+])
+
+#figure(
+  image("../code/data-exploration/plots/beaver_tails_length.png"),
+  caption: [Input and Output Character Length Distributions in BeaverTails]
+) \
+
+The character length of BeaverTails data is distributed similarly to Alpaca data. 
+
+#figure(
+  image("../code/data-exploration/plots/beaver_tails_categories.png"),
+  caption: [BeaverTails Harm Category Frequency]
+) \
+Most of the harmful data found in BeaverTails is related to crime (violence, unethical behavior, etc.) and misinformation (discrimination, hate speech, etc.). There do exist several hundred examples of less common harm types. Many harmful samples in the dataset are of multiple categories. The most common combinations are listed below:
+
+#set text(size: 0.9em)
+#figure(
+  table(
+    columns: (1.5fr, 1.5fr, 1fr),
+    inset: 4pt,
+    align: (left, left, center),
+    stroke: 0.5pt + gray,
+    fill: (x, y) => if y == 0 { gray.lighten(80%) },
+    
+    [*Category X*], [*Category Y*], [*Co-occurrence*],
+    [Financial, Property, Theft], [Violence, Aiding, Incitement], [26,687],
+    [Hate Speech, Offensive], [Non-violent Unethical], [23,860],
+    [Discrimination, Stereotype], [Non-violent Unethical], [20,546],
+    [Drugs, Weapons, Banned], [Violence, Aiding, Incitement], [14,888],
+    [Discrimination, Stereotype], [Hate Speech, Offensive], [13,755],
+  ),
+  caption: [Co-occurrence frequency of safety violation categories in the BeaverTails dataset.],
+) <category-cooccurrence>
 
 = Plan of Activities
 

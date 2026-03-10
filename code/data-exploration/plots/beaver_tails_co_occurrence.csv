@@ -1,0 +1,11 @@
+category.x,category.y,co_occurrrence
+"financial_crime,property_crime,theft","violence,aiding_and_abetting,incitement",26687
+"hate_speech,offensive_language",non_violent_unethical_behavior,23860
+"discrimination,stereotype,injustice",non_violent_unethical_behavior,20546
+"drug_abuse,weapons,banned_substance","violence,aiding_and_abetting,incitement",14888
+"discrimination,stereotype,injustice","hate_speech,offensive_language",13755
+non_violent_unethical_behavior,"violence,aiding_and_abetting,incitement",6785
+privacy_violation,"violence,aiding_and_abetting,incitement",3043
+"financial_crime,property_crime,theft",non_violent_unethical_behavior,2255
+"terrorism,organized_crime","violence,aiding_and_abetting,incitement",2208
+non_violent_unethical_behavior,"sexually_explicit,adult_content",2167
