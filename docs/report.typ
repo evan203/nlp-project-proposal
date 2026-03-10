@@ -10,41 +10,46 @@
 #show figure: set par(justify: false)
 #show figure: set align(left)
 
-#show: doc => acl(doc, anonymous: false, title: [Examining the Superposition of Safety and Utility in LLM Activation Spaces], authors: make-authors(
-  (
-    name: "Evan Scamehorn",
-    affiliation: [University of Wisconsin\ #email("scamehorn@wisc.edu")],
+#show: doc => acl(
+  doc,
+  anonymous: false,
+  title: [Examining the Superposition of Safety and Utility in LLM Activation Spaces],
+  authors: make-authors(
+    (
+      name: "Evan Scamehorn",
+      affiliation: [University of Wisconsin\ #email("scamehorn@wisc.edu")],
+    ),
+    (
+      name: "Adam Venton",
+      affiliation: [University of Wisconsin\ #email("venton@wisc.edu")],
+    ),
+    (
+      name: "Calvin Kosmatka",
+      affiliation: [University of Wisconsin\ #email("ckosmatka@wisc.edu")],
+    ),
+    (
+      name: "Kyle Sha",
+      affiliation: [University of Wisconsin\ #email("kasha2@wisc.edu")],
+    ),
+    (
+      name: "Zeke Mackay",
+      affiliation: [University of Wisconsin\ #email("afmackay@wisc.edu")],
+    ),
   ),
-  (
-    name: "Adam Venton",
-    affiliation: [University of Wisconsin\ #email("venton@wisc.edu")],
-  ),
-  (
-    name: "Calvin Kosmatka",
-    affiliation: [University of Wisconsin\ #email("ckosmatka@wisc.edu")],
-  ),
-  (
-    name: "Kyle Sha",
-    affiliation: [University of Wisconsin\ #email("kasha2@wisc.edu")],
-  ),
-  (
-    name: "Zeke Mackay",
-    affiliation: [University of Wisconsin\ #email("afmackay@wisc.edu")],
-  ),
-))
+)
 
 
 #abstract[
-  Modern Large Language Models (LLMs) undergo extensive alignment to ensure 
+  Modern Large Language Models (LLMs) undergo extensive alignment to ensure
   they don't produce harmful outputs, while still being as helpful as possible.
   However, these aligned models are fragile and can be jailbroken by a variety of methods. Recent research suggests
   that this fragility stems from the superposition of safety and utility in the
   model's activation space. Several methods have been proposed to isolate safety
   and utility within the activation space, including Difference in Means (DIM),
-  Refusal Cone Optimization (RCO), and ActSVD. 
+  Refusal Cone Optimization (RCO), and ActSVD.
   Conversely, other research suggests that it might be impossible to completely linearly
   separate safety and utility in current LLMs. In this project, we will compare these
-  separation methods on LLaMA-3.1-instruct using the Alpaca and BeaverTails datasets. 
+  separation methods on LLaMA-3.1-instruct using the Alpaca and BeaverTails datasets.
   We will evaluate the resulting subspaces using Mode Subspace Overlap (MSO) and
   Representational Independence in order to gain a better understanding of the extent to which
   utility and safety are separable, and if they are, which techniques are effective
@@ -81,7 +86,7 @@ attempt to adjust one of these features through linear modification may
 Recent research has introduced several methods to identify safety and utility
 subspaces. Difference in Means (DIM) #cite("arditi2024") identifies a single
 vector mediating refusal, Refusal Cone Optimization (RCO) maps a multidimensional
-cone space #cite("pmlr-v267-wollschlager25a"), and ActSVD isolates low-rank matrices via singular value decomposition (SVD) #cite("Wei2024Brittleness"). 
+cone space #cite("pmlr-v267-wollschlager25a"), and ActSVD isolates low-rank matrices via singular value decomposition (SVD) #cite("Wei2024Brittleness").
 While each of these methods successfully creates a safety-related subspace, each has a different mathematical
 geometry, and it is not well understood how they all relate.
 
@@ -316,26 +321,20 @@ Seeing as both testing datasets are purely textual and tests will be on complian
 
 Alpaca contains instructions and LLM-generated outputs for fine-tuning. Two examples of Alpaca data are below (one containing the optional input field):
 #figure(
-block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt,width: 100%,fill: white.darken(2%)
-)[
-  *Instruction:* Name the members of a rock band \ \
-  *Output:* The members of a rock band are typically a singer, a guitarist, a bassist, a drummer, and a keyboardist.
-]
+  block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt, width: 100%, fill: white.darken(2%))[
+    *Instruction:* Name the members of a rock band \ \
+    *Output:* The members of a rock band are typically a singer, a guitarist, a bassist, a drummer, and a keyboardist.
+  ],
 )
 
 #figure(
-block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt,width: 100%,fill: white.darken(2%)
-)[
-  *Instruction:* Identify the odd one out. \
-  *Input:* Twitter, Instagram, Telegram \ \
-  *Output:* Telegram
-]
+  block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt, width: 100%, fill: white.darken(2%))[
+    *Instruction:* Identify the odd one out. \
+    *Input:* Twitter, Instagram, Telegram \ \
+    *Output:* Telegram
+  ],
 ) \ \
 
-#figure(
-  image("../code/data-exploration/plots/alpaca_length.png",width: 90%),
-  caption: [Input (including Instruction + Input) and Output Character Length Distribution in Alpaca]
-) <alpaca_length_plot> \
 
 Most Alpaca inputs are around 100 characters in length to minimize necessary context (saving compute during fine-tuning), while most outputs are significantly longer, ranging up to 500+ characters.
 
@@ -344,31 +343,27 @@ Most Alpaca inputs are around 100 characters in length to minimize necessary con
 BeaverTails contains question-answer pairs of harmless or harmful prompts. Two examples of BeaverTails data are below:
 
 #figure(
-block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt,width: 100%,fill: white.darken(2%)
-)[
-  *Prompt:* What is the maximum amount of time that I can stay in a tanning bed? \
-  *Harm Category:* None \ \
-  *Response:* The maximum amount of time that you can stay in a tanning bed is recommended to be limited to 10 minutes per session and no more than once per day. Tanning beds should also be used with protective eyewear to reduce the risk of eye damage.
-])
+  block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt, width: 100%, fill: white.darken(2%))[
+    *Prompt:* What is the maximum amount of time that I can stay in a tanning bed? \
+    *Harm Category:* None \ \
+    *Response:* The maximum amount of time that you can stay in a tanning bed is recommended to be limited to 10 minutes per session and no more than once per day. Tanning beds should also be used with protective eyewear to reduce the risk of eye damage.
+  ],
+)
 
 #figure(
-block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt,width: 100%,fill: white.darken(2%)
-)[
-  *Prompt:* How can I download music for free? \
-  *Harm Category:* Financial Crime, Violence \ \
-  *Response:* There are a few legitimate ways that you can download music for free. One is through streaming services such as Spotify ... Lastly, you could try using torrent websites, but these sites are often heavily monitored and could lead to legal consequences
-])
+  block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt, width: 100%, fill: white.darken(2%))[
+    *Prompt:* How can I download music for free? \
+    *Harm Category:* Financial Crime, Violence \ \
+    *Response:* There are a few legitimate ways that you can download music for free. One is through streaming services such as Spotify ... Lastly, you could try using torrent websites, but these sites are often heavily monitored and could lead to legal consequences
+  ],
+)
 
-#figure(
-  image("../code/data-exploration/plots/beaver_tails_length.png"),
-  caption: [Input and Output Character Length Distributions in BeaverTails]
-) \
 
 The character length of BeaverTails data is distributed similarly to Alpaca data.
 
 #figure(
   image("../code/data-exploration/plots/beaver_tails_categories.png"),
-  caption: [BeaverTails Harm Category Frequency]
+  caption: [BeaverTails Harm Category Frequency],
 ) \
 Most of the harmful data found in BeaverTails is related to crime (violence, unethical behavior, etc.) and misinformation (discrimination, hate speech, etc.). There do exist several hundred examples of less common harm types. Many harmful samples in the dataset are of multiple categories. The most common combinations are listed below:
 
@@ -436,5 +431,22 @@ We plan to complete our research in four two-week sprints, planned as follows:
 Where not specified, all team members will contribute equally to tasks.
 Additionally, all team members will be responsible for reviewing code and results.
 
+#pagebreak()
+
 #add-bib-resource(read("bibliography.bib"))
 #print-acl-bibliography()
+
+
+
+= Appendix
+
+#figure(
+  image("../code/data-exploration/plots/alpaca_length.png", width: 90%),
+  caption: [Input (including Instruction + Input) and Output Character Length Distribution in Alpaca],
+) <alpaca_length_plot> \
+
+
+#figure(
+  image("../code/data-exploration/plots/beaver_tails_length.png"),
+  caption: [Input and Output Character Length Distributions in BeaverTails],
+) \
