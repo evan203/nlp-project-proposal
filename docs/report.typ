@@ -315,7 +315,7 @@ to answer unsafe prompts. The dataset contains the following fields:
 
 = Data Analysis
 
-Seeing as both testing datasets are purely textual and tests will be on compliance with prompts in datasets, little analysis can be done of either Alpaca or BeaverTails prior to their implementaion in our models.
+Seeing as both testing datasets are purely textual and tests will be on compliance with prompts in datasets, little analysis can be done of either Alpaca or BeaverTails prior to their implementation in our models.
 
 == Alpaca
 
