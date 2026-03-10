@@ -143,22 +143,46 @@ subspace within LLMs.
 
 = Plan of Activities
 
-We plan to complete our research in four two-week sprints:
-+ [3/9-3/23] Replication of Existing Results
-+ [3/23-4/6] Analysis
-+ [4/6-4/20] Follow-up Analysis and Validation
-+ [4/20-5/4] Wrap-Up
+We plan to complete our research in four two-week sprints, planned as follows:
 
-During Sprint 1, we will replicate existing methods: difference-in-means, ActSVD, and Refusal Cone Optimization.
-In parallel with this, we will write code for our planned analysis comparing these methodologies.
-Evan and Kyle will handle reimplementing existing results. Adam, Calvin, and Zeke will begin work on writing code for analysis.
+#grid(
+  columns: (1.2fr, 4.3fr),
+  column-gutter: 0.8em,
+  row-gutter: 1.5em,
 
-In Sprint 2, we will finish writing the analysis code started during Sprint 1, and run it.
+  [*Sprint 1* \ 3/9 -- 3/23],
+  [
+    *Replication of Existing Results*
+    - Reimplement difference-in-means, ActSVD, and Refusal Cone Optimization (Evan, Kyle).
+    - Develop analysis code for methodology comparison (Adam, Calvin, Zeke).
+  ],
 
-Sprint 3 will be used as a chance investigate any questions or new directions that come up as a result of the analysis in Sprint 2.
-This will also be used for validation of Sprint 2 results.
+  [*Sprint 2* \ 3/23 -- 4/6],
+  [
+    *Analysis execution*
+    - Finalize analysis code (Adam, Calvin, Zeke).
+    - Execute primary comparison runs (Evan, Kyle).
+  ],
 
-Sprint 4 will be used for all wrap-up activities, including writing our final report and preparing our final presentation. All group members will contribute to this.
+  [*Sprint 3* \ 4/6 -- 4/20],
+  [
+    *Validation & Follow-up*
+    - Investigate new directions/anomalies from Sprint 2.
+    - Perform validation checks on primary results.
+  ],
+
+  [*Sprint 4* \ 4/20 -- 5/4],
+  [
+    *Wrap-Up*
+    - Final report drafting.
+    - Presentation preparation.
+  ],
+)
+
+\
+
+Where not specified, all team members will contribute equally to tasks.
+Additionally, all team members will be responsible for reviewing code and results.
 
 #add-bib-resource(read("bibliography.bib"))
 #print-acl-bibliography()
