@@ -35,30 +35,27 @@
 
 
 #abstract[
-  Modern Large Language Models (LLMs) undergo extensive alignment in order to ensure 
+  Modern Large Language Models (LLMs) undergo extensive alignment to ensure 
   they don't produce harmful outputs, while still being as helpful as possible.
-  However, the methods by which LLMs navigate these two competing goals are not well
-  understood. This alignment can also be very fragile, being susceptible to a variety
-  of jailbreaks that seem to bypass the alignment entirely. Recent research suggests
+  However, these aligned models are fragile and can be jailbroken by a variety of methods. Recent research suggests
   that this fragility stems from the superposition of safety and utility in the
   model's activation space. Several methods have been proposed to isolate safety
-  and utility within the activation space, including Difference in Means (DIM) #cite("arditi2024"),
-  Refusal Cone Optimization (RCO) #cite("pmlr-v267-wollschlager25a"), and ActSVD #cite("Wei2024Brittleness"). 
+  and utility within the activation space, including Difference in Means (DIM),
+  Refusal Cone Optimization (RCO), and ActSVD. 
   Conversely, other research suggests that it might be impossible to completely linearly
-  separate safety and utility in current LLMs #cite("Ponkshe2026Safety"). In this project, we will compare these
-  separation methods in order to gain a better understanding of the extent to which
+  separate safety and utility in current LLMs. In this project, we will compare these
+  separation methods on LLaMA-3.1-instruct using the Alpaca and BeaverTails datasets. 
+  We will evaluate the resulting subspaces using Mode Subspace Overlap (MSO) and
+  Representational Independence in order to gain a better understanding of the extent to which
   utility and safety are separable, and if they are, which techniques are effective
-  at separating them. We will use LLaMA-3.1-instruct along with the Alpaca and
-  BeaverTails datasets as a standard environment for each of our baseline methods,
-  then compare the subspaces they create using Mode Subspace Overlap (MSO) and
-  Representational Independence. By quantifying the difference between these methods,
-  we hope to gain a better understanding of how and why they are different and what
-  each method's practical use might be when training safe and robust LLMs.
+  at separating them. By quantifying the difference between these methods,
+  we hope to gain practical insight into how safety and utility subspaces might
+  be used to train safe and robust LLMs.
 ]
 
 = Introduction
 
-1. Context and Motivation
+== Context and Motivation
 As LLMs have become more powerful and more accessible, LLM alignment techniques
 have become significantly more important. However, despite much research in this
 area, modern LLMs remain fragile, being able to be jailbroken by a variety of
@@ -67,7 +64,8 @@ Improving the robustness of these models will require moving beyond current
 empirical methods and developing a deep theoretical understanding of how safety
 and utility are represented within models.
 
-2. The Problem: Superposition in Activation Space
+
+== The Problem: Superposition in Activation Space
 Recent research into mechanistic interpretability has shown that model behavior
 is determined by distinct directions within the activation space. For example, there
 might be a single direction that determines model refusal, and by adjusting
@@ -79,7 +77,7 @@ suggests that safety and utility share representation capacity, and thus any
 attempt to adjust one of these features through linear modification may
 (and probably will) degrade the other.
 
-3. The Gap in Current Literature
+== The Gap in Current Literature
 Recent research has introduced several methods to identify safety and utility
 subspaces. Difference in Means (DIM) #cite("arditi2024") identifies a single
 vector mediating refusal, Refusal Cone Optimization (RCO) maps a multidimensional
@@ -87,7 +85,7 @@ cone space #cite("pmlr-v267-wollschlager25a"), and ActSVD isolates low-rank matr
 While each of these methods successfully creates a safety-related subspace, each has a different mathematical
 geometry, and it is not well understood how they all relate.
 
-4. Proposed Research
+== Proposed Research
 In this project, we aim to investigate the superposition of safety and utility
 by comparing each of these baseline methods. We will implement DIM, RCO, and
 ActSVD on the LLaMA-3.1-instruct model using the Alpaca and BeaverTails datasets.
