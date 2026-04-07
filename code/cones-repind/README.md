@@ -91,3 +91,96 @@ Use the `run_rdo_pipeline.py` script to evaluate the computed RDO, Cone, or othe
 ## Analysis
 
 The `cosinesims_analysis.py` script can be used to analyze the cosine similarities between the computed DIM direction and rep. ind. directions.
+
+### Comparing Jailbroken Models
+
+This repository now includes tools for computing **Representational Independence (RepInd) Statistics** between jailbroken models created by different methodologies:
+
+**Supported jailbreak methods:**
+- **ActSVD**: Activation subspace modification via low-rank decomposition (`actsvd/`)
+- **Diff-in-Means**: Orthogonalization against refusal directions (`diff-in-means/`)
+
+#### 1. Extract DIM Directions from Jailbroken Models
+
+First, extract DIM directions from your saved jailbroken models:
+
+```bash
+python extract_dim_directions.py \
+    --model_path /path/to/actsvd_jailbroken_model \
+    --harmful_prompts data/saladbench_splits/harmful_train.json \
+    --harmless_prompts data/saladbench_splits/harmless_train.json \
+    --n_samples 500 \
+    --output_dir results/directions
+```
+
+Repeat for the diff-in-means jailbroken model.
+
+#### 2. Compute RepInd Statistics Between Models
+
+Compare two jailbroken models to analyze their representational independence:
+
+```bash
+python jailbreak_comparison.py \
+    --model_a_path /path/to/actsvd_jailbroken_model \
+    --model_b_path /path/to/diff_in_means_jailbroken_model \
+    --data_dir data/saladbench_splits \
+    --n_samples 500 \
+    --output_dir results/jailbreak_comparison
+```
+
+**Output includes:**
+- `repind_results.json`: Complete statistics including:
+  - `repind_mse`: RepInd MSE (lower = more independent subspaces)
+  - `repind_mae`: RepInd MAE
+  - `direction_similarity`: Cosine similarity between DIM directions
+  - `layer_diffs`: Per-layer contribution to RepInd
+- `repind_visualization.png`: Visual summary of the analysis
+
+#### Understanding RepInd Statistics
+
+The RepInd statistic (based on the Cones paper) measures how independent two jailbreak subspaces are by computing:
+
+```
+RepInd = MSE[(cos_sim_A(A) - cos_sim_A(B)) + (cos_sim_B(B) - cos_sim_B(A))]
+```
+
+Where:
+- `cos_sim_A(X)` = cosine similarity of direction from model A with activations from model X
+- `cos_sim_B(X)` = cosine similarity of direction from model B with activations from model X
+
+**Interpretation:**
+- **Low RepInd (~0.01-0.05)**: Subspaces are highly independent; different mechanisms for jailbreaking
+- **Medium RepInd (~0.05-0.15)**: Partial overlap in jailbreaking mechanisms
+- **High RepInd (~0.15+)**: Subspaces overlap significantly; similar jailbreaking mechanisms
+
+#### API Usage
+
+You can also use the functions programmatically:
+
+```python
+from transformer_utils import (
+    load_model_and_tokenizer,
+    get_residual_stream_activations,
+    compute_mean_diff_direction,
+)
+from jailbreak_comparison import (
+    compute_repind_statistic,
+    compute_direction_similarity,
+    compute_layer_wise_cosine_similarities,
+)
+
+# Load models and extract activations
+model_a, tokenizer_a = load_model_and_tokenizer(model_a_path)
+model_b, tokenizer_b = load_model_and_tokenizer(model_b_path)
+
+activations_a = get_residual_stream_activations(model_a, tokenizer_a, prompts)
+activations_b = get_residual_stream_activations(model_b, tokenizer_b, prompts)
+
+# Compute directions
+direction_a = compute_mean_diff_direction(activations_a, activations_a, layer=best_layer)
+direction_b = compute_mean_diff_direction(activations_b, activations_b, layer=best_layer)
+
+# Compute statistics
+repind_stats = compute_repind_statistic(activations_a, activations_b, direction_a, direction_b)
+dir_sim = compute_direction_similarity(direction_a, direction_b)
+```
