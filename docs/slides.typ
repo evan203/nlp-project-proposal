@@ -29,8 +29,10 @@
 
   *Recap:*
 
-  - What problem are you addressing?
-  - What are the datasets? What are the evaluation metrics?
+  - Aligned LLMs can produce harmful outputs using diverse jailbreaking techniques
+  - Safety subspaces are hypothesized to be represented in several different ways
+  - Alpaca (harmless prompts) and BeaverTails (harmful prompts) datasets
+  - Refusal score and Attack Success Rate to evaluate performance
 
   // #line(length: 100%)
 ]
@@ -74,22 +76,18 @@
 
   *Future Extension:*
 
-  - What future extension are you planning to do before the final presentation?
+  - Evaluate Mode Subspace Overlap (MSO) between safety subspaces
+  - Implement and evaluate further jailbreaking techniques
 ]
 
 #slide[
-  /*
-   * What are the GPUs required (e.g., quantity, GPU RAMs)?
-   *
-   * Estimate how long it will take to run one experiment. For example,
-   * training a 3B model for 10 epochs takes ~5hrs. Add a reference of how you
-   * derive this estimation (e.g., either you have run one experiment yourself
-   * or get the estimation from an existing paper).
-   */
   *Contribution:*
 
-  - Describe each team member’s contribution.
-  - Provide the percentage of contributions within the group. For example, Member 1 contributes 40% of efforts. Member 2 20%, Member 3 20%, Member 4 20%.
+  Evan: Project Management, Paper reimplementation (20%)
+  Adam: Report writeup, Model analysis (20%)
+  Calvin: Model analysis, Literature review (20%)
+  Kyle: Paper reimplementation, Report writeup (20%)
+  Zeke: Model analysis, Slide writeup (20%)
 
 ]
 
