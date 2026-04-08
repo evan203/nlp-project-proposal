@@ -13,6 +13,7 @@ Computes:
 """
 
 import argparse
+import gc
 import json
 import os
 import sys
@@ -34,6 +35,14 @@ from transformer_utils import (
     get_cosine_sims_for_prompts,
     get_model_config,
 )
+
+
+def unload_model(model, tokenizer):
+    """Safely unload model and clear GPU memory."""
+    del model
+    del tokenizer
+    torch.cuda.empty_cache()
+    gc.collect()
 
 
 sns.set_style("whitegrid")
@@ -501,38 +510,19 @@ def main():
 
     print("=" * 60)
     print("Jailbreak Representational Independence Analysis")
+    print("(Sequential model loading to avoid OOM)")
     print("=" * 60)
 
-    print(f"\n[1/8] Loading SaladBench data...")
+    # Step 1: Load prompts
+    print(f"\n[1/7] Loading SaladBench data...")
     harmful_instructions, harmless_instructions = load_saladbench_data(
         args.data_dir, n_samples=args.n_samples
     )
     print(f"  - Harmful prompts: {len(harmful_instructions)}")
     print(f"  - Harmless prompts: {len(harmless_instructions)}")
 
-    print(f"\n[2/8] Loading Model A (ActSVD) from {args.model_a_path}...")
-    model_a, tokenizer_a = load_model_and_tokenizer(args.model_a_path)
-    model_a.eval()
-    config_a = get_model_config(args.model_a_path)
-    n_layers_a = model_a.config.num_hidden_layers
-    print(f"  - Model A layers: {n_layers_a}")
-
-    print(f"\n[3/8] Loading Model B (Diff-in-Means) from {args.model_b_path}...")
-    model_b, tokenizer_b = load_model_and_tokenizer(args.model_b_path)
-    model_b.eval()
-    config_b = get_model_config(args.model_b_path)
-    n_layers_b = model_b.config.num_hidden_layers
-    print(f"  - Model B layers: {n_layers_b}")
-
     model_a_name = os.path.basename(args.model_a_path.rstrip("/"))
     model_b_name = os.path.basename(args.model_b_path.rstrip("/"))
-
-    prompts_a = apply_chat_template(
-        tokenizer_a, harmful_instructions, args.model_a_path
-    )
-    prompts_b = apply_chat_template(
-        tokenizer_b, harmful_instructions, args.model_b_path
-    )
 
     activations_path_a = os.path.join(
         args.output_dir, f"activations_a_{model_a_name}.pt"
@@ -540,52 +530,115 @@ def main():
     activations_path_b = os.path.join(
         args.output_dir, f"activations_b_{model_b_name}.pt"
     )
+    direction_path_a = os.path.join(args.output_dir, f"direction_a_{model_a_name}.pt")
+    direction_path_b = os.path.join(args.output_dir, f"direction_b_{model_b_name}.pt")
+    metadata_path_a = os.path.join(args.output_dir, f"metadata_a_{model_a_name}.json")
+    metadata_path_b = os.path.join(args.output_dir, f"metadata_b_{model_b_name}.json")
 
-    if args.load_activations and os.path.exists(activations_path_a):
-        print(f"\n[4/8] Loading pre-extracted activations for Model A...")
-        activations_a = torch.load(activations_path_a)
+    # Step 2: Model A - load, extract, unload
+    print(f"\n[2/7] Loading and processing Model A ({model_a_name})...")
+
+    if (
+        args.load_activations
+        and os.path.exists(activations_path_a)
+        and os.path.exists(metadata_path_a)
+    ):
+        print(f"  Loading pre-extracted activations from {activations_path_a}")
+        activations_a = torch.load(activations_path_a, map_location="cpu")
+        metadata_a = json.load(open(metadata_path_a))
+        n_layers_a = metadata_a["n_layers"]
+        best_layer_a = metadata_a["best_layer"]
+        direction_a = torch.load(direction_path_a, map_location="cpu")
+        print(
+            f"  - Loaded activations, n_layers={n_layers_a}, best_layer={best_layer_a}"
+        )
     else:
-        print(f"\n[4/8] Extracting activations from Model A...")
+        print(f"  Loading model from {args.model_a_path}...")
+        model_a, tokenizer_a = load_model_and_tokenizer(args.model_a_path)
+        model_a.eval()
+        n_layers_a = model_a.config.num_hidden_layers
+        print(f"  - Model A layers: {n_layers_a}")
+
+        prompts_a = apply_chat_template(
+            tokenizer_a, harmful_instructions, args.model_a_path
+        )
+
+        print(f"  Extracting activations from Model A...")
         activations_a = get_residual_stream_activations(
             model_a, tokenizer_a, prompts_a, batch_size=8
         )
-        if args.save_activations:
-            torch.save(activations_a, activations_path_a)
-            print(f"  - Saved to {activations_path_a}")
 
-    if args.load_activations and os.path.exists(activations_path_b):
-        print(f"\n[5/8] Loading pre-extracted activations for Model B...")
-        activations_b = torch.load(activations_path_b)
+        best_layer_a = args.best_layer_a if args.best_layer_a else int(0.7 * n_layers_a)
+        print(f"  Computing DIM direction from layer {best_layer_a}...")
+        direction_a = compute_mean_diff_direction(
+            activations_a, activations_a, best_layer_a
+        )
+
+        print(f"  Saving activations and direction...")
+        torch.save(activations_a, activations_path_a)
+        torch.save(direction_a, direction_path_a)
+        metadata_a = {"n_layers": n_layers_a, "best_layer": best_layer_a}
+        with open(metadata_path_a, "w") as f:
+            json.dump(metadata_a, f)
+        print(f"  - Saved to {args.output_dir}")
+
+        print(f"  Unloading Model A from GPU memory...")
+        unload_model(model_a, tokenizer_a)
+
+    # Step 3: Model B - load, extract, unload
+    print(f"\n[3/7] Loading and processing Model B ({model_b_name})...")
+
+    if (
+        args.load_activations
+        and os.path.exists(activations_path_b)
+        and os.path.exists(metadata_path_b)
+    ):
+        print(f"  Loading pre-extracted activations from {activations_path_b}")
+        activations_b = torch.load(activations_path_b, map_location="cpu")
+        metadata_b = json.load(open(metadata_path_b))
+        n_layers_b = metadata_b["n_layers"]
+        best_layer_b = metadata_b["best_layer"]
+        direction_b = torch.load(direction_path_b, map_location="cpu")
+        print(
+            f"  - Loaded activations, n_layers={n_layers_b}, best_layer={best_layer_b}"
+        )
     else:
-        print(f"\n[5/8] Extracting activations from Model B...")
+        print(f"  Loading model from {args.model_b_path}...")
+        model_b, tokenizer_b = load_model_and_tokenizer(args.model_b_path)
+        model_b.eval()
+        n_layers_b = model_b.config.num_hidden_layers
+        print(f"  - Model B layers: {n_layers_b}")
+
+        prompts_b = apply_chat_template(
+            tokenizer_b, harmful_instructions, args.model_b_path
+        )
+
+        print(f"  Extracting activations from Model B...")
         activations_b = get_residual_stream_activations(
             model_b, tokenizer_b, prompts_b, batch_size=8
         )
-        if args.save_activations:
-            torch.save(activations_b, activations_path_b)
-            print(f"  - Saved to {activations_path_b}")
 
-    print(f"\n[6/8] Computing DIM directions...")
+        best_layer_b = args.best_layer_b if args.best_layer_b else int(0.7 * n_layers_b)
+        print(f"  Computing DIM direction from layer {best_layer_b}...")
+        direction_b = compute_mean_diff_direction(
+            activations_b, activations_b, best_layer_b
+        )
 
-    layer_range_a = (0, args.best_layer_a if args.best_layer_a else n_layers_a)
-    layer_range_b = (0, args.best_layer_b if args.best_layer_b else n_layers_b)
+        print(f"  Saving activations and direction...")
+        torch.save(activations_b, activations_path_b)
+        torch.save(direction_b, direction_path_b)
+        metadata_b = {"n_layers": n_layers_b, "best_layer": best_layer_b}
+        with open(metadata_path_b, "w") as f:
+            json.dump(metadata_b, f)
+        print(f"  - Saved to {args.output_dir}")
 
-    best_layer_a = args.best_layer_a if args.best_layer_a else int(0.7 * n_layers_a)
-    best_layer_b = args.best_layer_b if args.best_layer_b else int(0.7 * n_layers_b)
+        print(f"  Unloading Model B from GPU memory...")
+        unload_model(model_b, tokenizer_b)
 
-    print(f"  - Model A: computing direction from layer {best_layer_a}")
-    direction_a = compute_mean_diff_direction(
-        activations_a, activations_a, best_layer_a
-    )
+    # Step 4: Compute RepInd statistics (CPU only now)
+    print(f"\n[4/7] Computing Representational Independence statistics...")
 
-    print(f"  - Model B: computing direction from layer {best_layer_b}")
-    direction_b = compute_mean_diff_direction(
-        activations_b, activations_b, best_layer_b
-    )
-
-    print(f"\n[7/8] Computing Representational Independence statistics...")
-
-    repind_layers = (0, int(n_layers_a * args.layer_cutoff))
+    repind_layers = (0, int(min(n_layers_a, n_layers_b) * args.layer_cutoff))
 
     repind_results = compute_repind_statistic(
         activations_a,
@@ -618,6 +671,8 @@ def main():
         "model_b_path": args.model_b_path,
         "best_layer_a": best_layer_a,
         "best_layer_b": best_layer_b,
+        "n_layers_a": n_layers_a,
+        "n_layers_b": n_layers_b,
         "layer_range": repind_layers,
         "n_samples": len(harmful_instructions),
         "repind_mse": repind_results["repind_mse"],
@@ -636,15 +691,20 @@ def main():
         "cross_direction_b_on_a": cross_cos["direction_b_on_model_a"].tolist(),
     }
 
-    print(f"\n[8/8] Saving results...")
+    print(f"\n[5/7] Saving results...")
 
     results_path = os.path.join(args.output_dir, "repind_results.json")
     with open(results_path, "w") as f:
         json.dump(results, f, indent=2)
     print(f"  - Results saved to {results_path}")
 
+    print(f"\n[6/7] Creating visualization...")
     viz_path = os.path.join(args.output_dir, "repind_visualization.png")
     plot_repind_analysis(results, viz_path, model_a_name, model_b_name)
+
+    print(f"\n[7/7] Cleanup...")
+    del activations_a, activations_b, direction_a, direction_b
+    gc.collect()
 
     print("\n" + "=" * 60)
     print("SUMMARY")
