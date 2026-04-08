@@ -44,6 +44,24 @@ def get_model_config(model_name: str) -> dict:
         if key in model_lower:
             return config
 
+    # Fallback: load from config.json for local paths
+    if os.path.exists(model_name):
+        config_path = os.path.join(model_name, "config.json")
+        if os.path.exists(config_path):
+            with open(config_path) as f:
+                config = json.load(f)
+            model_type = config.get("model_type", "").lower()
+            architectures = config.get("architectures", [])
+
+            if "llama" in model_type or any(
+                "llama" in str(a).lower() for a in architectures
+            ):
+                return configs["llama-3.1"]
+            elif "gemma" in model_type:
+                return configs["gemma"]
+            elif "qwen" in model_type:
+                return configs["qwen"]
+
     raise ValueError(f"Model {model_name} not supported. Please add configuration.")
 
 
