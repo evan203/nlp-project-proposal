@@ -72,9 +72,21 @@
 
 #slide[
 
-  *Future Extension:*
+  *Future Extension: Extensions of Current Work*
 
-  - What future extension are you planning to do before the final presentation?
+  - Further comparisons of the three methods
+  - More datasets
+    - TwinPrompt dataset from TwinBreak @twinbreak
+]
+
+#slide[
+
+  *Future Extension: Additional Techniques*
+
+  -  Differentiated Directional Intervention @diffDirection
+    - More advanced version of difference-in-means
+  - Prompt optimization @hiddenDimensions
+    - Avoiding words that activate the harmfulness subspace
 ]
 
 #slide[
