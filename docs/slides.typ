@@ -83,6 +83,29 @@
 ]
 
 #slide[
+  *Findings — Activation Comparison:*
+
+  #grid(
+    columns: (2fr, 1fr),
+    gutter: 12pt,
+    [
+      #image("figures/activation_comparison.png", height: 50%)
+    ],
+    [
+      #text(size: 0.75em)[
+    When running both jailbroken models we see from both metrics that their activations are more different when given harmful prompts vs helpful ones.
+
+
+            This supports the idea that neither of these methods fully describes the safety subspace since both jailbreaks are able to work while being different.
+
+
+        _Comparison of last layer activations between actSVD and DIM jailbroken models._ 
+      ]
+    ],
+  )
+]
+
+#slide[
   *Findings — Jailbreak ASR:*
 
   #grid(
