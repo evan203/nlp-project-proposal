@@ -175,8 +175,21 @@
 
 #slide[
 
-  *Future Extension:*
+  *Future Extension: Extensions of Current Work*
 
+  - Further comparisons of the three methods
+  - More datasets
+    - TwinPrompt dataset from TwinBreak @twinbreak
+]
+
+#slide[
+
+  *Future Extension: Additional Techniques*
+
+  - Differentiated Directional Intervention @diffDirection
+    - More advanced version of difference-in-means
+  - Prompt optimization @hiddenDimensions
+    - Avoiding words that activate the harmfulness subspace
   - Evaluate Mode Subspace Overlap (MSO) between safety subspaces
   - Implement and evaluate further jailbreaking techniques
 ]
@@ -184,11 +197,11 @@
 #slide[
   *Contribution:*
 
-  Evan: Project Management, Paper reimplementation (20%)
-  Adam: Report writeup, Model analysis (20%)
-  Calvin: Model analysis, Literature review (20%)
-  Kyle: Paper reimplementation, Report writeup (20%)
-  Zeke: Model analysis, Slide writeup (20%)
+  - Evan: Project Management, Paper reimplementation (20%)
+  - Adam: Report writeup, Model analysis (20%)
+  - Calvin: Model analysis, Literature review (20%)
+  - Kyle: Paper reimplementation, Report writeup (20%)
+  - Zeke: Model analysis, Slide writeup (20%)
 
 ]
 
