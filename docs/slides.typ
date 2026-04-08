@@ -63,13 +63,114 @@
 ]
 
 #slide[
+  *Findings — Safety Benchmarks:*
 
-  *Findings:*
+  We benchmark three variants of *Llama-3.1-8B-Instruct*:
+  + *Base* — the original aligned model
+  + *DIM-Ablated* — refusal direction projected out at layer 11 @arditi2024
+  + *ActSVD-Modified* — low-rank safety-critical weight components removed @Wei2024Brittleness
 
-  - How does your method compare with existing baseline?
-  - quantitative results
-  - qualitative error analysis.
+  Evaluated on *JailbreakBench* @jailbreakbench (100 harmful prompts, 10 harm categories, 10 each) and 100 harmless *Alpaca* @alpaca prompts. Attack Success Rate (ASR) = fraction of harmful prompts where the model complies instead of refusing. Compliance on harmless prompts should remain at 1.0.
 
+  #table(
+    columns: (auto, auto, auto, auto, auto),
+    align: (left, center, center, center, center),
+    [*Model*], [*JBB ASR*], [*Harmless*], [*Pile PPL*], [*Alpaca PPL*],
+    [Base], [0.16], [1.00], [8.69], [6.01],
+    [DIM-Ablated], [1.00], [1.00], [8.75], [6.13],
+    [ActSVD-Modified], [0.63], [1.00], [13.09], [6.82],
+  )
+]
+
+#slide[
+  *Findings — Jailbreak ASR:*
+
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 12pt,
+    [
+      #image("figures/benchmark_jailbreak_asr_overall.png", height: 50%)
+    ],
+    [
+      #text(size: 0.75em)[
+        DIM ablation achieves *100 % ASR* — complete safety removal across every harm category. ActSVD reaches *63 %* — partial removal only.
+
+        The per-category breakdown reveals ActSVD is *non-uniform*: 0.9 on Disinformation, Expert advice, Malware — but only 0.2 on Harassment and 0.0 on Sexual content.
+
+        _Benchmark: JailbreakBench @jailbreakbench — 100 prompts, 10 harm categories. Compliance via refusal-prefix matching._
+      ]
+    ],
+  )
+]
+
+#slide[
+  *Findings — Per-Category Jailbreak ASR:*
+
+  #image("figures/benchmark_jailbreak_asr_per_category.png", width: 80%, height: 55%)
+
+  #text(
+    size: 0.7em,
+  )[ActSVD's weight pruning removes safety *non-uniformly* — it largely fails on socially sensitive categories (Harassment, Sexual content) while succeeding on more technical harms (Malware, Disinformation). DIM is uniformly effective.]
+]
+
+#slide[
+  *Findings — Utility Preservation:*
+
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 12pt,
+    [
+      #image("figures/benchmark_perplexity_pile_alpaca.png", height: 45%)
+    ],
+    [
+      #image("figures/benchmark_safety_utility_tradeoff.png", height: 45%)
+    ],
+  )
+
+  #text(
+    size: 0.7em,
+  )[Perplexity on *The Pile* @thepile (general text) and *Alpaca* @alpaca (instructions). DIM barely impacts capability (*+0.7 %* Pile PPL). ActSVD causes *+51 %* Pile PPL degradation — its distributed weight modifications damage general language modelling. The safety–utility scatter (right) shows DIM *dominates* ActSVD on both axes.]
+]
+
+#slide[
+  *Findings — MSO Heatmap (DIM vs ActSVD):*
+
+  #grid(
+    columns: (50%, 50%),
+    gutter: 12pt,
+    [
+      #image("figures/subspace_mso_heatmap_layer_by_weight.png", height: 85%, fit: "contain")
+    ],
+    [
+      #text(size: 0.65em)[
+        Maximum Subspace Overlap (MSO) @Ponkshe2026Safety measures overlap of the DIM refusal direction with ActSVD's weight-delta subspace per layer and weight type.
+
+        Most cells are *near random baseline* ($approx k_A dot k_B \/ d$) — the two methods find *nearly orthogonal* safety structures.
+
+        Only notable signal: *layer 10* MLP down proj (MSO = 0.057, 3.2× random) — adjacent to DIM's source layer (11).
+      ]
+    ],
+  )
+]
+
+#slide[
+  *Findings — Per-Layer MSO & Cross-Model Cosine:*
+
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 12pt,
+    [
+      #image("figures/subspace_mso_per_layer_avg.png", height: 50%)
+    ],
+    [
+      #image("figures/subspace_cross_model_dim_cosine.png", height: 50%)
+    ],
+  )
+
+  #text(
+    size: 0.7em,
+  )[*Left:* Per-layer average MSO (red) vs random baseline (blue). Layer 10 is the only layer clearly above baseline. Layers 20–31 show no signal.
+    *Right:* DIM directions computed independently for 6 models. Llama-3.1 ↔ Llama-3 cosine similarity = *0.603* — all cross-family pairs $approx 0$. The refusal direction is *model-family-specific*.]
 ]
 
 #slide[
