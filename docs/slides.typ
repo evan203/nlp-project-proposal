@@ -82,28 +82,6 @@
   )
 ]
 
-#slide[
-  *Findings — Activation Comparison:*
-
-  #grid(
-    columns: (2fr, 1fr),
-    gutter: 12pt,
-    [
-      #image("figures/activation_comparison.png", height: 50%)
-    ],
-    [
-      #text(size: 0.75em)[
-    When running both jailbroken models we see from both metrics that their activations are more different when given harmful prompts vs helpful ones.
-
-
-            This supports the idea that neither of these methods fully describes the safety subspace since both jailbreaks are able to work while being different.
-
-
-        _Comparison of last layer activations between actSVD and DIM jailbroken models._ 
-      ]
-    ],
-  )
-]
 
 #slide[
   *Findings — Jailbreak ASR:*
@@ -194,6 +172,30 @@
     size: 0.7em,
   )[*Left:* Per-layer average MSO (red) vs random baseline (blue). Layer 10 is the only layer clearly above baseline. Layers 20–31 show no signal.
     *Right:* DIM directions computed independently for 6 models. Llama-3.1 ↔ Llama-3 cosine similarity = *0.603* — all cross-family pairs $approx 0$. The refusal direction is *model-family-specific*.]
+]
+
+
+#slide[
+  *Findings — Activation Comparison:*
+
+  #grid(
+    columns: (2fr, 1fr),
+    gutter: 12pt,
+    [
+      #image("figures/activation_comparison.png", height: 50%)
+    ],
+    [
+      #text(size: 0.75em)[
+        When running both jailbroken models we see from both metrics that their activations are more different when given harmful prompts vs helpful ones.
+
+
+        This supports the idea that neither of these methods fully describes the safety subspace since both jailbreaks are able to work while being different.
+
+
+        _Comparison of last layer activations between actSVD and DIM jailbroken models._
+      ]
+    ],
+  )
 ]
 
 #slide[
