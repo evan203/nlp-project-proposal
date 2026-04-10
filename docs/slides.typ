@@ -27,19 +27,19 @@
 
 #slide[
 
-  *Recap:*
+  *Problem, Datasets, Metrics:*
 
   - Aligned LLMs can produce harmful outputs using diverse jailbreaking techniques
   - Safety subspaces are hypothesized to be represented in several different ways
-  - Alpaca (harmless prompts) and BeaverTails (harmful prompts) datasets
-  - Refusal score and Attack Success Rate to evaluate performance
+  - Alpaca (harmless prompts), JailbreakBench (harmful prompts)
+  - Attack Success Rate to evaluate performance
 
   // #line(length: 100%)
 ]
 
 #slide[
 
-  *Baseline Method:*
+  *Safety Subspace Generation Methods:*
 
   - Difference-in-means (DIM) @arditi2024
     - Mean response activation difference between harmful and harmless prompts
@@ -47,18 +47,15 @@
     - Use gradient descent to generate multiple basis vectors representing safety mechanisms
   - ActSVD safety/utility ranks @Wei2024Brittleness
     - Perform Singular Value Decomposition on model weights to identify safety/utility-critical low-rank matrices
+]
+
+#slide[
+  *Comparison Methods:*
+
   - Mode Subspace Overlap (MSO) @Ponkshe2026Safety
     - Performs SVD to quantify overlap between subspaces
   - Representational Independence (RepInd) @pmlr-v267-wollschlager25a
     - Performs cosine similarity on ablated model activations to test independence of multiple subspaces
-]
-
-#slide[
-  *Experiment setup:*
-
-  - Comparison of safety and utility subspaces
-    - Mode Subspace Overlap (MSO) similarity test between safety subspaces @Ponkshe2026Safety
-    - Representational Independence (RepInd) comparison between each safety subspace and utility subspace @pmlr-v267-wollschlager25a
 
 ]
 
