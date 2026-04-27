@@ -47,7 +47,7 @@ if [[ -z "${PYTHON_RUNNER:-}" ]]; then
 fi
 
 MODEL_ID="${MODEL##*/}"
-RCO_ROOT="$SAVE_DIR/rdo/$MODEL_ID"
+RCO_ROOT="$SAVE_DIR/rdo"
 DIRECTIONS_JSON="$CODE_DIR/results/geometry_repind/directions_rco.json"
 DIRECTION_PT="$CODE_DIR/results/geometry_repind/rco_direction.pt"
 
