@@ -33,12 +33,20 @@ MODEL_ID="${MODEL##*/}"
 EXPECTED_DIM_DIR="$SAVE_DIR/$DIM_DIR/$MODEL_ID"
 ACTIVE_DIM_DIR="$CODE_DIR/methods/dim/pipeline/runs/$MODEL_ID"
 
-if [[ ! -f "$EXPECTED_DIM_DIR/direction.pt" && -f "$ACTIVE_DIM_DIR/direction.pt" ]]; then
+# Mirror DIM artifacts into the location rdo.py expects, or fail early.
+if [[ ! -f "$EXPECTED_DIM_DIR/direction.pt" ]]; then
+  if [[ ! -f "$ACTIVE_DIM_DIR/direction.pt" ]]; then
+    echo "ERROR: DIM direction not found."
+    echo "  Looked in: $ACTIVE_DIM_DIR"
+    echo "  Run ./scripts/run_dim.sh first, then retry."
+    exit 1
+  fi
   echo "Mirroring DIM artifacts for RCO: $ACTIVE_DIM_DIR -> $EXPECTED_DIM_DIR"
   mkdir -p "$EXPECTED_DIM_DIR/generate_directions"
-  cp "$ACTIVE_DIM_DIR/direction.pt" "$EXPECTED_DIM_DIR/direction.pt"
-  cp "$ACTIVE_DIM_DIR/direction_metadata.json" "$EXPECTED_DIM_DIR/direction_metadata.json"
-  cp "$ACTIVE_DIM_DIR/generate_directions/mean_diffs.pt" "$EXPECTED_DIM_DIR/generate_directions/mean_diffs.pt"
+  cp "$ACTIVE_DIM_DIR/direction.pt"             "$EXPECTED_DIM_DIR/direction.pt"
+  cp "$ACTIVE_DIM_DIR/direction_metadata.json"  "$EXPECTED_DIM_DIR/direction_metadata.json"
+  cp "$ACTIVE_DIM_DIR/generate_directions/mean_diffs.pt" \
+     "$EXPECTED_DIM_DIR/generate_directions/mean_diffs.pt"
 fi
 
 if [[ -z "${PYTHON_RUNNER:-}" ]]; then
