@@ -19,7 +19,7 @@
 )
 
 #front-slide(
-  title: "Examining the Superposition of Saftey and Utility in LLM Activation Spaces",
+  title: "Comparing Safety-Removal Subspaces in Aligned LLMs",
   subtitle: [_Midterm Project Update_],
   authors: "Group 6: Evan Scamehorn, Kyle Sha, Adam Venton, Zeke Mackay, and Calvin Kosmatka",
   info: [#link("https://github.com/evan203/nlp-project-proposal")],
@@ -27,10 +27,11 @@
 
 #slide[
 
-  *Recap:*
+  *Research question:*
 
-  - What problem are you addressing?
-  - What are the datasets? What are the evaluation metrics?
+  - Do different linear safety-removal methods recover the same refusal mechanism?
+  - When a method removes refusal behavior, how much utility is preserved?
+  - Do Geometry-style RepInd profiles show independent refusal directions?
 
   // #line(length: 100%)
 ]
@@ -48,15 +49,19 @@
   - Mode Subspace Overlap (MSO) @Ponkshe2026Safety
     - Performs SVD to quantify overlap between subspaces
   - Representational Independence (RepInd) @pmlr-v267-wollschlager25a
-    - Performs cosine similarity on ablated model activations to test independence of multiple subspaces
+    - Tests whether ablating one direction changes another direction's layerwise cosine profile
 ]
 
 #slide[
   *Experiment setup:*
 
-  - Comparison of safety and utility subspaces
-    - Mode Subspace Overlap (MSO) similarity test between safety subspaces @Ponkshe2026Safety
-    - Representational Independence (RepInd) comparison between each safety subspace and utility subspace @pmlr-v267-wollschlager25a
+  - Target model: Llama-3.1-8B-Instruct
+  - Safety eval: JailbreakBench attack success rate
+  - Utility eval: harmless Alpaca compliance + Pile/Alpaca perplexity
+  - Geometry eval:
+    - MSO between DIM refusal direction and ActSVD weight-delta subspaces @Ponkshe2026Safety
+    - MSO between DIM safety directions and harmless-instruction utility PCA subspaces
+    - RepInd profile changes before/after direction ablation @pmlr-v267-wollschlager25a
 
 ]
 
@@ -64,17 +69,22 @@
 
   *Findings:*
 
-  - How does your method compare with existing baseline?
-  - quantitative results
-  - qualitative error analysis.
+  - DIM ablation raises JBB ASR from 0.16 to 1.00 with little perplexity change.
+  - ActSVD raises JBB ASR to 0.63 but causes larger Pile/Alpaca perplexity degradation.
+  - DIM vs ActSVD MSO is near random for most layers, with a mild hotspot around layer 10.
+  - Direct safety-vs-utility overlap is above random: rank-8 mean MSO = 0.192 vs 0.00195 random baseline.
+  - RepInd profile test is asymmetric: ablating DIM strongly changes one derived basis profile, but ablating that basis barely changes DIM.
 
 ]
 
 #slide[
 
-  *Future Extension:*
+  *Cones/RepInd Next Step:*
 
-  - What future extension are you planning to do before the final presentation?
+  - Current RepInd run uses DIM-derived cone-basis candidates.
+  - Full optimized cone claim requires running `scripts/run_rco.sh`.
+  - Then compare DIM, RDO, orthogonal-RDO, RepInd, and cone basis directions with the same RepInd script.
+  - Evaluate cone samples against DIM and ActSVD on the same safety/utility benchmark.
 ]
 
 #slide[

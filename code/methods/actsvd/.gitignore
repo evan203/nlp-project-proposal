@@ -1,0 +1,4 @@
+.DS_Store
+lib/__pycache__
+out
+data/*.csv

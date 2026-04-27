@@ -13,7 +13,7 @@
 #show: doc => acl(
   doc,
   anonymous: false,
-  title: [Examining the Superposition of Safety and Utility in LLM Activation Spaces],
+  title: [Comparing Safety-Removal Subspaces in Aligned LLMs],
   authors: make-authors(
     (
       name: "Evan Scamehorn",
@@ -43,19 +43,23 @@
   Modern Large Language Models (LLMs) undergo extensive alignment to ensure
   they don't produce harmful outputs, while still being as helpful as possible.
   However, these aligned models are fragile and can be jailbroken by a variety of methods. Recent research suggests
-  that this fragility stems from the superposition of safety and utility in the
-  model's activation space. Several methods have been proposed to isolate safety
-  and utility within the activation space, including Difference in Means (DIM),
-  Refusal Cone Optimization (RCO), and ActSVD.
+  that this fragility may stem from compact safety mechanisms whose relationship
+  to general utility remains poorly understood. Several methods have been
+  proposed to isolate or remove safety-related structure, including Difference
+  in Means (DIM), Refusal Cone Optimization (RCO), and ActSVD.
   Conversely, other research suggests that it might be impossible to completely linearly
-  separate safety and utility in current LLMs. In this project, we will compare these
-  separation methods on LLaMA-3.1-instruct using the Alpaca and BeaverTails datasets.
-  We will evaluate the resulting subspaces using Mode Subspace Overlap (MSO) and
-  Representational Independence in order to gain a better understanding of the extent to which
-  utility and safety are separable, and if they are, which techniques are effective
-  at separating them. By quantifying the difference between these methods,
-  we hope to gain practical insight into how safety and utility subspaces might
-  be used to train safe and robust LLMs.
+  separate safety and utility in current LLMs. In this project, we compare DIM
+  and ActSVD on LLaMA-3.1-Instruct using harmful and harmless instruction
+  datasets, and we add a Geometry-paper-style Representational Independence
+  (RepInd) profile analysis for DIM-derived directions. We
+  evaluate behavioral safety and utility with JailbreakBench attack success
+  rate, harmless instruction compliance, and perplexity. We then evaluate
+  geometric agreement between DIM and ActSVD using Mode Subspace Overlap (MSO)
+  and directly compare DIM safety directions against harmless-instruction
+  utility PCA subspaces. This framing answers a concrete question: do current
+  linear methods recover the same refusal mechanism, how much do safety
+  directions overlap with utility activations, and do nearby refusal directions
+  remain causally independent under ablation?
 ]
 
 = Introduction
@@ -91,14 +95,26 @@ While each of these methods successfully creates a safety-related subspace, each
 geometry, and it is not well understood how they all relate.
 
 == Proposed Research
-In this project, we aim to investigate the superposition of safety and utility
-by comparing each of these baseline methods. We will implement DIM, RCO, and
-ActSVD on the LLaMA-3.1-instruct model using the Alpaca and BeaverTails datasets.
-We will evaluate the effectiveness of each model, then compute the overlap of
-the subspaces using Mode Subspace Overlap (MSO) and Representational Independence.
-By evaluating the overlap of these methods, we hope to clarify how each subspace
-relates to the overall safety and utility subspaces within the model in order
-to create a foundation for future safety and alignment methods.
+In this project, we investigate safety representations through three connected
+questions. First, do DIM and ActSVD identify the same safety-removal mechanism,
+or do they modify distinct regions of the model? Second, how much does the DIM
+safety direction overlap with harmless-instruction utility activations? Third,
+when these methods weaken refusal behavior, how much general utility do they
+preserve? We implement DIM and ActSVD on LLaMA-3.1-Instruct and add a local
+RepInd profile analysis based on the Geometry paper. Full optimized RCO cone
+training remains an extension path. We evaluate behavioral effects with JailbreakBench attack
+success rate, harmless Alpaca compliance, and Pile/Alpaca perplexity. We then
+compute overlap between extracted subspaces using Mode Subspace Overlap (MSO).
+We also evaluate Representational Independence for DIM-derived directions by
+measuring how each direction's layerwise cosine profile changes when another
+direction is ablated.
+
+Comparing DIM and ActSVD tests cross-method agreement between safety-removal
+mechanisms. To answer safety--utility overlap directly, we also compute a
+matched activation-space analysis: DIM safety directions are compared against
+the top PCA directions of harmless instruction activations at the same layers
+and token positions. This gives a direct MSO estimate of how much safety lies
+inside the utility activation subspace.
 
 
 = Literature Survey
@@ -221,14 +237,16 @@ $Delta W(r^u, r^s) = (I - Pi^u) Pi^s W$. While Wei et al. evaluate on
 Llama-2 7B/13B, the method operates on generic linear layers and transfers
 directly to Llama-3.1 8B.
 
-*Refusal Cone Optimization (RCO).* Following #citet("pmlr-v267-wollschlager25a"), we
-use gradient-based optimization to discover multiple refusal directions that
-together form a multi-dimensional conic region. The optimization minimizes a
-composite loss encoding two properties: (1) monotonic scaling of refusal
-probability with the magnitude of activation addition, and (2) surgical
-ablation that bypasses refusal on harmful prompts while preserving behavior on
-harmless prompts. A retain loss based on KL divergence ensures minimal side
-effects on harmless inputs.
+*Refusal Cone Optimization (RCO).* Following #citet("pmlr-v267-wollschlager25a"), the
+Geometry codebase can use gradient-based optimization to discover multiple
+refusal directions that together form a multi-dimensional conic region. The
+optimization minimizes a composite loss encoding two properties: (1) monotonic
+scaling of refusal probability with the magnitude of activation addition, and
+(2) surgical ablation that bypasses refusal on harmful prompts while preserving
+behavior on harmless prompts. A retain loss based on KL divergence ensures
+minimal side effects on harmless inputs. In our current results, full optimized
+RCO training is treated as an extension path; we do, however, run the RepInd
+profile test on DIM-derived directions.
 
 // *Neuron-Level Attribution (Wanda/SNIP).* Following #citet("Wei2024Brittleness"), we
 // complement the rank-level analysis with neuron-level safety attribution. Using
@@ -244,12 +262,13 @@ effects on harmless inputs.
 == Subspace Comparison
 
 Our comparison phase addresses two questions. First, _cross-method
-consistency_: do DIM, ActSVD, and RCO converge on similar safety-relevant
-features, or does each capture a distinct aspect of the safety mechanism?
-Second, _safety--utility separability_: for each extraction method, how much
-does its identified safety subspace overlap with the utility subspace, and which
-method yields the most cleanly separable safety representation? We apply two
-metrics that capture complementary aspects of subspace relationships.
+consistency_: do DIM and ActSVD converge on similar safety-relevant features,
+or does each capture a distinct aspect of the safety mechanism?
+Second, _safety--utility overlap_: how much does each layer's safety direction
+lie inside a utility activation subspace? Third, _behavioral safety--utility
+tradeoff_: after removing safety behavior, how much does each method degrade
+useful behavior? We apply two metrics that capture complementary aspects of
+subspace relationships.
 
 *Mode Subspace Overlap (MSO).* Following #citet("Ponkshe2026Safety"), MSO
 measures the geometric overlap between two subspaces. For two matrices
@@ -259,15 +278,14 @@ $eta$-fraction of the energy. The MSO metric is defined as:
 $ "MSO"(bold(V), bold(W); eta) = (||S||_F^2) / min(k_V, k_W) $
 where $S = Q_V^top Q_W$ is the overlap matrix between the orthonormal bases.
 MSO ranges from 0 (orthogonal subspaces) to 1 (identical spans). We compute MSO
-for all pairwise combinations of safety subspaces (DIM vs ActSVD, DIM vs RCO,
-ActSVD vs RCO) to assess cross-method agreement, and between each safety
-subspace and the ActSVD utility subspace to quantify safety--utility
-entanglement. Because DIM yields a single direction while ActSVD and RCO yield
-multi-dimensional subspaces, cross-method MSO involving DIM will be bounded by
-the dimensionality asymmetry; we report the random baseline
+between the DIM refusal direction and ActSVD weight-delta subspaces to assess
+cross-method agreement. We also compute MSO between DIM safety directions and
+matched utility PCA subspaces to quantify safety--utility entanglement
+directly. Because DIM yields a single direction while ActSVD yields
+multi-dimensional subspaces, cross-method MSO is bounded by the dimensionality
+asymmetry; we report the random baseline
 $EE["overlap"] = max(k_V, k_W) slash d$ alongside each MSO value for
-calibration. The method yielding the lowest safety--utility MSO identifies the
-most separable safety representation.
+calibration.
 
 *Representational Independence (RepInd).* Following
 #citet("pmlr-v267-wollschlager25a"), RepInd tests whether two individual directions are
@@ -277,14 +295,88 @@ not change the cosine similarity profile of the other across layers:
 $ forall l in L: cos(bold(x)^((l)), lambda) = cos(tilde(bold(x))_("abl"(mu))^((l)), lambda) $
 and vice versa. MSO may report high geometric overlap between directions that
 turn out to be causally independent, or low overlap between directions that are
-causally entangled via non-linear interactions across layers. Because RepInd
-operates on individual direction vectors, we apply it directly between DIM's
-refusal vector and each RCO cone basis vector. For ActSVD, which produces a
-projection matrix $Pi^s = U^s (U^s)^top$ rather than individual directions, we
-test RepInd on its top singular vectors $bold(u)_1^s, bold(u)_2^s, dots$
-against directions from DIM and RCO. We also test RepInd between safety
-directions and utility-critical directions to assess whether safety can be
-ablated without functionally disrupting utility.
+causally entangled via non-linear interactions across layers. In this codebase,
+the cones-repind implementation can train RDO directions, orthogonal directions,
+independent directions, and multi-vector refusal cones. Our project-owned
+RepInd script measures a direction's layerwise cosine-similarity profile before
+and after ablating another direction. Without completed optimized RCO artifacts,
+we derive a small cone-like basis from high-norm DIM mean-difference candidates;
+with trained RCO artifacts, the same script can compare DIM, RDO, RepInd, and
+cone basis vectors directly.
+
+= Current Implementation Status
+
+The current codebase has working DIM and ActSVD runs for LLaMA-3.1-Instruct,
+plus a direct safety--utility overlap analysis and a RepInd profile analysis.
+The DIM pipeline extracts a refusal direction, evaluates baseline/ablation/
+activation-addition completions, computes utility losses, and saves a modified
+model. The ActSVD pipeline computes low-rank safety and utility projections and
+saves a modified model after removing safety ranks orthogonal to utility ranks.
+The safety--utility overlap script computes per-layer DIM safety directions and
+compares them to top PCA bases of harmless instruction activations, producing
+per-layer, rank-sweep, and heatmap figures.
+The RepInd script computes cosine-profile changes before and after ablation for
+DIM and two DIM-derived cone-basis candidates. Full RCO training remains an
+extension because it requires a longer optimization run.
+
+Our preliminary behavioral benchmark compares the base model, the DIM-modified
+model, and the ActSVD-modified model. DIM ablation increases JailbreakBench
+attack success rate from 0.16 to 1.00 while leaving harmless compliance at 1.00
+and producing only small perplexity changes. ActSVD increases attack success
+rate to 0.63 but causes larger perplexity degradation. This suggests that DIM
+is a stronger safety-removal attack in our current setup, while ActSVD creates
+more collateral utility damage.
+
+#figure(
+  image("figures/benchmark_safety_utility_tradeoff.png", width: 85%),
+  caption: [Preliminary safety--utility tradeoff. DIM removes refusal with little perplexity cost, while ActSVD partially removes refusal with higher utility degradation.],
+) <benchmark_tradeoff>
+
+The first geometric comparison measures DIM-vs-ActSVD method overlap. MSO is
+close to the random baseline for most layers, with a mild local hotspot around
+layer 10. The second geometric comparison measures safety-vs-utility overlap
+directly by projecting DIM safety directions into harmless-instruction utility
+PCA subspaces. Together, these distinguish method agreement from the stronger
+safety--utility superposition question.
+
+#figure(
+  image("figures/subspace_mso_per_layer_avg.png", width: 90%),
+  caption: [Average per-layer MSO between the DIM refusal direction and ActSVD weight-delta subspaces. Most layers are near the random baseline.],
+) <mso_per_layer>
+
+The direct safety--utility activation analysis shows substantially above-random
+overlap. With a rank-8 utility PCA subspace, mean safety--utility MSO is 0.192,
+compared to a random baseline of 0.00195. The selected DIM refusal direction at
+layer 11 has rank-8 utility-subspace overlap of 0.078. These values indicate
+that the safety direction is not geometrically isolated from the activation
+manifold used by benign instructions, although overlap varies substantially by
+layer.
+
+#figure(
+  image("figures/safety_utility_overlap_per_layer.png", width: 90%),
+  caption: [Per-layer overlap between DIM safety directions and rank-8 harmless-instruction utility PCA subspaces.],
+) <safety_utility_per_layer>
+
+#figure(
+  image("figures/safety_utility_overlap_by_rank.png", width: 75%),
+  caption: [Mean safety--utility MSO increases as the utility PCA subspace rank grows, remaining above the random-subspace baseline.],
+) <safety_utility_by_rank>
+
+The RepInd profile analysis adds the causal comparison from the Geometry paper.
+Using 32 harmful prompts, we compare DIM with two DIM-derived cone-basis
+candidates. Ablating DIM changes the first derived basis profile substantially
+(mean absolute profile change 0.227), while ablating that derived basis barely
+changes the DIM profile (0.0017). The second derived basis is nearly independent
+in both directions. This suggests that DIM occupies a dominant refusal
+component, while some additional high-norm candidate directions are much less
+causally coupled to DIM. Because these are DIM-derived candidates rather than
+fully optimized RCO vectors, this result should be read as a RepInd methodology
+run, not as a completed cone-optimization claim.
+
+#figure(
+  image("figures/repind_change_heatmap.png", width: 70%),
+  caption: [RepInd profile-change matrix for DIM and two DIM-derived cone-basis candidates. Rows are ablated directions; columns are measured directions. Lower off-diagonal values indicate greater representational independence.],
+) <repind_heatmap>
 
 = Data Sets
 
