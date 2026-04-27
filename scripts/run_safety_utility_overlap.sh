@@ -35,10 +35,39 @@ if [[ -z "${PYTHON_RUNNER:-}" ]]; then
   fi
 fi
 
+MODEL_ID="${MODEL_PATH##*/}"
+DIM_DIR_PT="$CODE_DIR/methods/dim/pipeline/runs/$MODEL_ID/direction.pt"
+RCO_PT="$CODE_DIR/results/geometry_repind/rco_direction.pt"
+ACTSVD_OUT="${ACTSVD_OUT:-$CODE_DIR/results/actsvd/out}"
+ACTSVD_DIRECTION_PT="$CODE_DIR/results/actsvd/activation_direction.pt"
+ACTSVD_N_SAMPLES="${ACTSVD_N_SAMPLES:-64}"
+
+EXTRA_DIRS=()
+[[ -f "$DIM_DIR_PT" ]] && EXTRA_DIRS+=("DIM:$DIM_DIR_PT")
+[[ -f "$RCO_PT" ]] && EXTRA_DIRS+=("RCO:$RCO_PT")
+
+# Extract ActSVD activation direction if the modified model exists but direction not yet computed
+if [[ -d "$ACTSVD_OUT" ]]; then
+  if [[ ! -f "$ACTSVD_DIRECTION_PT" ]]; then
+    echo "Extracting ActSVD activation direction (n=$ACTSVD_N_SAMPLES) ..."
+    cd "$ROOT_DIR"
+    $PYTHON_RUNNER scripts/extract_actsvd_direction.py \
+      --base_model_path "$MODEL_PATH" \
+      --modified_model_path "$ACTSVD_OUT" \
+      --output_path "$ACTSVD_DIRECTION_PT" \
+      --n_samples "$ACTSVD_N_SAMPLES"
+    cd "$CODE_DIR"
+  fi
+  [[ -f "$ACTSVD_DIRECTION_PT" ]] && EXTRA_DIRS+=("ActSVD:$ACTSVD_DIRECTION_PT")
+fi
+
 echo "Running safety-vs-utility overlap analysis"
 echo "  model: $MODEL_PATH"
 echo "  utility samples: $N_UTILITY_SAMPLES"
 echo "  output: $OUTPUT_DIR"
+if [[ ${#EXTRA_DIRS[@]} -gt 0 ]]; then
+  echo "  extra directions: ${EXTRA_DIRS[*]}"
+fi
 
 cd "$CODE_DIR"
 $PYTHON_RUNNER analysis/safety_utility_overlap.py \
@@ -47,7 +76,8 @@ $PYTHON_RUNNER analysis/safety_utility_overlap.py \
   --n_safety_samples "$N_SAFETY_SAMPLES" \
   --utility_ranks "$UTILITY_RANKS" \
   --primary_rank "$PRIMARY_RANK" \
-  --output_dir "$OUTPUT_DIR"
+  --output_dir "$OUTPUT_DIR" \
+  ${EXTRA_DIRS[@]:+--extra_directions "${EXTRA_DIRS[@]}"}
 
 $PYTHON_RUNNER analysis/plot_safety_utility_overlap.py \
   --results_dir "$OUTPUT_DIR" \

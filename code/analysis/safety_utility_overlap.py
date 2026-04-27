@@ -162,6 +162,47 @@ def projection_scores(safety_vectors: torch.Tensor, utility_bases: torch.Tensor,
     return rank_rows
 
 
+def load_named_direction(spec: str) -> tuple[str, torch.Tensor]:
+    name, path_str = spec.split(":", 1)
+    path = Path(path_str)
+    raw = torch.load(path, map_location="cpu", weights_only=True)
+    if isinstance(raw, dict):
+        raw = next(iter(raw.values()))
+    if isinstance(raw, list):
+        raw = raw[0]
+    direction = torch.as_tensor(raw).float()
+    # 2-D [n_layers, d_model]: per-layer direction (e.g. ActSVD activation delta)
+    if direction.ndim == 2:
+        norms = direction.norm(dim=1, keepdim=True).clamp_min(1e-12)
+        return name, direction / norms
+    direction = direction.flatten()
+    norm = direction.norm()
+    if norm < 1e-12:
+        raise ValueError(f"Direction from {path} has near-zero norm.")
+    return name, direction / norm
+
+
+def named_direction_overlap(direction: torch.Tensor, utility_bases: torch.Tensor, ranks: list[int]) -> dict:
+    n_layers = utility_bases.shape[0]
+    d = utility_bases.shape[1]
+    max_rank = utility_bases.shape[-1]
+    per_layer = direction.ndim == 2  # [n_layers, d_model]
+    result = {}
+    for rank in ranks:
+        r = min(rank, max_rank)
+        scores = []
+        for layer in range(n_layers):
+            basis = utility_bases[layer, :, :r]  # [d, r]
+            if per_layer:
+                dir_l = direction[layer] if layer < direction.shape[0] else direction[-1]
+            else:
+                dir_l = direction
+            score = torch.square(basis.T @ dir_l).sum().item()
+            scores.append(score)
+        result[str(rank)] = {"mso": scores, "random_baseline": rank / d}
+    return result
+
+
 def maybe_selected_dim_overlap(args, utility_bases: torch.Tensor, ranks: list[int]) -> dict | None:
     if not args.dim_direction_path or not args.dim_metadata_path:
         return None
@@ -209,6 +250,12 @@ def main() -> None:
         type=Path,
         default=CODE_ROOT / "methods/dim/pipeline/runs/Llama-3.1-8B-Instruct/direction_metadata.json",
     )
+    parser.add_argument(
+        "--extra_directions",
+        nargs="*",
+        default=[],
+        help="Extra directions as NAME:PATH pairs (e.g. RCO:results/geometry_repind/rco_direction.pt). Each gets a per-layer overlap curve.",
+    )
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -240,6 +287,15 @@ def main() -> None:
     rank_results = projection_scores(safety_vectors, utility_bases, args.utility_ranks)
     selected_dim = maybe_selected_dim_overlap(args, utility_bases, args.utility_ranks)
 
+    named_directions: dict = {}
+    for spec in args.extra_directions:
+        try:
+            name, direction = load_named_direction(spec)
+            named_directions[name] = named_direction_overlap(direction, utility_bases, args.utility_ranks)
+            print(f"Computed named direction overlap: {name}")
+        except Exception as e:
+            print(f"Warning: skipping extra direction {spec!r}: {e}")
+
     results = {
         "model_path": args.model_path,
         "utility_dataset": args.utility_dataset,
@@ -250,6 +306,7 @@ def main() -> None:
         "utility_definition": "top PCA directions of harmless instruction activations at matching positions",
         "rank_results": rank_results,
         "selected_dim_direction": selected_dim,
+        "named_directions": named_directions,
     }
 
     (args.output_dir / "safety_utility_overlap_results.json").write_text(json.dumps(results, indent=2))

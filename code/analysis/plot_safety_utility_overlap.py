@@ -32,7 +32,7 @@ def sorted_ranks(results: dict) -> list[int]:
     return sorted(int(rank) for rank in results["rank_results"])
 
 
-def plot_per_layer(results: dict, ranks: list[int], output_dir: Path, primary_rank: int) -> None:
+def plot_per_layer(results: dict, ranks: list[int], output_dir: Path, primary_rank: int, named_directions: dict = {}) -> None:
     rank_key = str(primary_rank)
     if rank_key not in results["rank_results"]:
         primary_rank = ranks[min(len(ranks) - 1, len(ranks) // 2)]
@@ -45,6 +45,22 @@ def plot_per_layer(results: dict, ranks: list[int], output_dir: Path, primary_ra
     fig, ax = plt.subplots(figsize=(10, 4))
     ax.bar(layers, scores, color="#3066be", label=f"safety vs utility MSO, k={primary_rank}")
     ax.axhline(baseline, color="#c33c54", linestyle="--", linewidth=1.4, label="random baseline")
+
+    _nd_colors = ["#e6550d", "#31a354", "#756bb1", "#636363"]
+    for idx, (name, nd) in enumerate(named_directions.items()):
+        if rank_key not in nd:
+            continue
+        color = _nd_colors[idx % len(_nd_colors)]
+        ax.plot(
+            layers,
+            np.array(nd[rank_key]["mso"]),
+            marker="o",
+            markersize=3,
+            linewidth=1.4,
+            color=color,
+            label=f"{name} (k={primary_rank})",
+        )
+
     ax.set_xlabel("Transformer layer")
     ax.set_ylabel("Projection fraction / MSO")
     ax.set_title("Safety Direction Overlap With Utility Activation Subspace")
@@ -99,7 +115,8 @@ def main() -> None:
     args = parse_args()
     results = load_results(args.results_dir)
     ranks = sorted_ranks(results)
-    plot_per_layer(results, ranks, args.results_dir, args.primary_rank)
+    named_directions = results.get("named_directions", {})
+    plot_per_layer(results, ranks, args.results_dir, args.primary_rank, named_directions)
     plot_heatmap(results, ranks, args.results_dir)
     plot_rank_summary(results, ranks, args.results_dir)
     print(f"Saved safety-vs-utility overlap plots to {args.results_dir}")

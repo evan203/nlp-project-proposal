@@ -15,9 +15,42 @@ import numpy as np
 
 OUT_DIR = Path(__file__).resolve().parents[1] / "results" / "benchmark"
 RESULTS = OUT_DIR / "benchmark_results.json"
-MODEL_ORDER = ["Base (Llama-3.1-8B-Instruct)", "DIM-Ablated", "ActSVD-Modified"]
-MODEL_LABELS = ["Base", "DIM-Ablated", "ActSVD"]
-COLORS = ["#4c78a8", "#f58518", "#54a24b"]
+
+# Base is always first; remaining methods are appended in insertion order.
+BASE_NAME = "Base (Llama-3.1-8B-Instruct)"
+PREFERRED_ORDER = ["Base (Llama-3.1-8B-Instruct)", "DIM-Ablated", "ActSVD-Modified"]
+# Extended palette — first three match original colors, rest use matplotlib tab10.
+_FIXED_COLORS = ["#4c78a8", "#f58518", "#54a24b"]
+_EXTRA_COLORS = plt.get_cmap("tab10").colors  # type: ignore[attr-defined]
+
+
+def _build_order(data: dict) -> tuple[list[str], list[str], list[str]]:
+    """Return (names, short_labels, colors) for every method present in data."""
+    seen = set()
+    names: list[str] = []
+    for name in PREFERRED_ORDER:
+        if name in data:
+            names.append(name)
+            seen.add(name)
+    for name in data:
+        if name not in seen:
+            names.append(name)
+
+    labels = []
+    for name in names:
+        label = name.replace("(Llama-3.1-8B-Instruct)", "").replace("-Ablated", "").replace("-Modified", "").strip()
+        labels.append(label or name)
+
+    colors = []
+    extra_idx = 0
+    for i in range(len(names)):
+        if i < len(_FIXED_COLORS):
+            colors.append(_FIXED_COLORS[i])
+        else:
+            colors.append(_EXTRA_COLORS[extra_idx % len(_EXTRA_COLORS)])
+            extra_idx += 1
+
+    return names, labels, colors
 
 
 def load_results() -> dict:
@@ -37,10 +70,10 @@ def add_bar_labels(ax, bars, fmt="{:.2f}") -> None:
         )
 
 
-def plot_jailbreak_asr(data: dict) -> None:
-    values = [data[name]["jailbreakbench"]["asr"] for name in MODEL_ORDER]
-    fig, ax = plt.subplots(figsize=(6, 4))
-    bars = ax.bar(MODEL_LABELS, values, color=COLORS)
+def plot_jailbreak_asr(data: dict, names, labels, colors) -> None:
+    values = [data[name]["jailbreakbench"]["asr"] for name in names]
+    fig, ax = plt.subplots(figsize=(max(6, len(names) * 1.4), 4))
+    bars = ax.bar(labels, values, color=colors)
     ax.set_ylim(0, 1.08)
     ax.set_ylabel("Attack success rate")
     ax.set_title("JailbreakBench ASR")
@@ -50,10 +83,10 @@ def plot_jailbreak_asr(data: dict) -> None:
     plt.close(fig)
 
 
-def plot_harmless_compliance(data: dict) -> None:
-    values = [data[name]["harmless_compliance"]["rate"] for name in MODEL_ORDER]
-    fig, ax = plt.subplots(figsize=(6, 4))
-    bars = ax.bar(MODEL_LABELS, values, color=COLORS)
+def plot_harmless_compliance(data: dict, names, labels, colors) -> None:
+    values = [data[name]["harmless_compliance"]["rate"] for name in names]
+    fig, ax = plt.subplots(figsize=(max(6, len(names) * 1.4), 4))
+    bars = ax.bar(labels, values, color=colors)
     ax.set_ylim(0, 1.08)
     ax.set_ylabel("Compliance rate")
     ax.set_title("Harmless Prompt Compliance")
@@ -63,15 +96,17 @@ def plot_harmless_compliance(data: dict) -> None:
     plt.close(fig)
 
 
-def plot_perplexity(data: dict) -> None:
+def plot_perplexity(data: dict, names, labels, colors) -> None:
     datasets = ["pile", "alpaca"]
     x = np.arange(len(datasets))
-    width = 0.24
+    n = len(names)
+    width = min(0.24, 0.8 / n)
+    offsets = np.linspace(-(n - 1) / 2, (n - 1) / 2, n) * width
 
     fig, ax = plt.subplots(figsize=(7, 4))
-    for idx, name in enumerate(MODEL_ORDER):
+    for idx, name in enumerate(names):
         values = [data[name]["perplexity"][dataset]["perplexity"] for dataset in datasets]
-        bars = ax.bar(x + (idx - 1) * width, values, width, label=MODEL_LABELS[idx], color=COLORS[idx])
+        bars = ax.bar(x + offsets[idx], values, width, label=labels[idx], color=colors[idx])
         add_bar_labels(ax, bars)
 
     ax.set_xticks(x)
@@ -84,13 +119,13 @@ def plot_perplexity(data: dict) -> None:
     plt.close(fig)
 
 
-def plot_safety_utility_tradeoff(data: dict) -> None:
+def plot_safety_utility_tradeoff(data: dict, names, labels, colors) -> None:
     fig, ax = plt.subplots(figsize=(6, 4))
-    for idx, name in enumerate(MODEL_ORDER):
+    for idx, name in enumerate(names):
         asr = data[name]["jailbreakbench"]["asr"]
         ppl = data[name]["perplexity"]["pile"]["perplexity"]
-        ax.scatter(asr, ppl, s=90, color=COLORS[idx], label=MODEL_LABELS[idx])
-        ax.annotate(MODEL_LABELS[idx], (asr, ppl), xytext=(6, 5), textcoords="offset points", fontsize=8)
+        ax.scatter(asr, ppl, s=90, color=colors[idx], label=labels[idx])
+        ax.annotate(labels[idx], (asr, ppl), xytext=(6, 5), textcoords="offset points", fontsize=8)
 
     ax.set_xlabel("JailbreakBench ASR")
     ax.set_ylabel("Pile perplexity")
@@ -101,15 +136,17 @@ def plot_safety_utility_tradeoff(data: dict) -> None:
     plt.close(fig)
 
 
-def plot_jailbreak_asr_per_category(data: dict) -> None:
-    categories = list(data[MODEL_ORDER[0]]["jailbreakbench"]["per_category"].keys())
+def plot_jailbreak_asr_per_category(data: dict, names, labels, colors) -> None:
+    categories = list(data[names[0]]["jailbreakbench"]["per_category"].keys())
     x = np.arange(len(categories))
-    width = 0.24
+    n = len(names)
+    width = min(0.24, 0.8 / n)
+    offsets = np.linspace(-(n - 1) / 2, (n - 1) / 2, n) * width
 
     fig, ax = plt.subplots(figsize=(12, 4.8))
-    for idx, name in enumerate(MODEL_ORDER):
+    for idx, name in enumerate(names):
         values = [data[name]["jailbreakbench"]["per_category"][category] for category in categories]
-        ax.bar(x + (idx - 1) * width, values, width, label=MODEL_LABELS[idx], color=COLORS[idx])
+        ax.bar(x + offsets[idx], values, width, label=labels[idx], color=colors[idx])
 
     ax.set_ylim(0, 1.08)
     ax.set_xticks(x)
@@ -124,11 +161,13 @@ def plot_jailbreak_asr_per_category(data: dict) -> None:
 
 def main() -> None:
     data = load_results()
-    plot_jailbreak_asr(data)
-    plot_harmless_compliance(data)
-    plot_perplexity(data)
-    plot_safety_utility_tradeoff(data)
-    plot_jailbreak_asr_per_category(data)
+    names, labels, colors = _build_order(data)
+    print(f"Methods in benchmark: {names}")
+    plot_jailbreak_asr(data, names, labels, colors)
+    plot_harmless_compliance(data, names, labels, colors)
+    plot_perplexity(data, names, labels, colors)
+    plot_safety_utility_tradeoff(data, names, labels, colors)
+    plot_jailbreak_asr_per_category(data, names, labels, colors)
     print(f"Saved benchmark plots to {OUT_DIR}")
 
 
