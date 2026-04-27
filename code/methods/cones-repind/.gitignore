@@ -238,6 +238,8 @@ fabric.properties
 .vscode
 artifacts/
 data/**
+!data/saladbench_splits/
+!data/saladbench_splits/**
 gcg_attacks/
 logs/
 need_clean
