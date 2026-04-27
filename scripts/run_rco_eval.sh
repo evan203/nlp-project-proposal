@@ -94,6 +94,7 @@ if [[ "${SKIP_EVAL:-0}" != "1" ]]; then
     --model_path "$MODEL" \
     --direction_path "$DIRECTION_PT" \
     --method_name "$METHOD_NAME" \
+    --eval_ppl --n_ppl_samples 64 \
     --output_dir results/benchmark
 
   echo ""

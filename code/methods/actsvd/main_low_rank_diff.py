@@ -135,6 +135,7 @@ def make_low_rank(
     device=torch.device("cuda:0"),
     prune_data_pos="alpaca_cleaned_no_safety",
     prune_data_neg="align",
+    model_family="llama2",
 ):
     """
     prune_data_pos: retain most useful (total_rank - rank_pos) ranks
@@ -162,6 +163,7 @@ def make_low_rank(
         seqlen=model.seqlen,
         tokenizer=tokenizer,
         disentangle=args.disentangle,
+        model_family=model_family,
     )
     dataloader_neg, _ = get_loaders(
         prune_data_neg,
@@ -170,15 +172,16 @@ def make_low_rank(
         seqlen=model.seqlen,
         tokenizer=tokenizer,
         disentangle=args.disentangle,
+        model_family=model_family,
     )
     print("dataset loading complete")
 
     num_hidden_layers = model.config.num_hidden_layers
 
     for layer in trange(num_hidden_layers):
-        layer_filter_fn = lambda x: (
-            f"layers.{layer}." in x
-        )  ### TODO # hack for llama series
+        layer_filter_fn = lambda x, l=layer: (
+            f"layers.{l}." in x
+        )  # bind layer by value to avoid closure bug
 
         # enable recording for the current layer.
         for name, module in model.named_modules():
@@ -342,7 +345,7 @@ if __name__ == "__main__":
     def get_llm(model_name, cache_dir=None):
         model = AutoModelForCausalLM.from_pretrained(
             modeltype2path[model_name],
-            dtype=torch.bfloat16,
+            torch_dtype=torch.bfloat16,
             cache_dir=cache_dir,
             low_cpu_mem_usage=True,
             device_map="cuda",
@@ -357,6 +360,10 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError(f"Model {args.model} not supported")
 
+    # Detect model family for correct chat template handling
+    model_family = "llama3" if "llama-3" in args.model.lower() or "llama3" in args.model.lower() else "llama2"
+    print(f"Model: {args.model}, family: {model_family}")
+
     device = "cuda"
     make_low_rank(
         args,
@@ -365,6 +372,7 @@ if __name__ == "__main__":
         device,
         prune_data_pos=args.prune_data_pos,
         prune_data_neg=args.prune_data_neg,
+        model_family=model_family,
     )
 
     # Save model after ActSVD and orthogonal projection

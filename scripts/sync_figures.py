@@ -25,6 +25,12 @@ FIGURE_MAP = {
     ROOT / "code/results/geometry_repind/repind_dim_pair_profiles.png": DOC_FIGURES / "repind_dim_pair_profiles.png",
 }
 
+# RCO repind results override the DIM-derived ones if available
+FIGURE_MAP_RCO_OVERRIDE = {
+    ROOT / "code/results/geometry_repind_rco/repind_change_heatmap.png": DOC_FIGURES / "repind_change_heatmap.png",
+    ROOT / "code/results/geometry_repind_rco/repind_dim_pair_profiles.png": DOC_FIGURES / "repind_dim_pair_profiles.png",
+}
+
 
 def main() -> None:
     DOC_FIGURES.mkdir(parents=True, exist_ok=True)
@@ -37,6 +43,14 @@ def main() -> None:
         shutil.copy2(src, dst)
         copied += 1
         print(f"copied: {src.relative_to(ROOT)} -> {dst.relative_to(ROOT)}")
+
+    # Override with RCO repind figures if they exist
+    for src, dst in FIGURE_MAP_RCO_OVERRIDE.items():
+        if not src.exists():
+            continue
+        shutil.copy2(src, dst)
+        copied += 1
+        print(f"copied (rco override): {src.relative_to(ROOT)} -> {dst.relative_to(ROOT)}")
 
     print(f"done: copied {copied} figure(s)")
 
