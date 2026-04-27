@@ -339,7 +339,7 @@ if __name__ == "__main__":
         # "Qwen3.5-9B": "Qwen/Qwen3.5-9B",
     }
 
-    def get_llm(model_name, cache_dir="llm_weights"):
+    def get_llm(model_name, cache_dir=None):
         model = AutoModelForCausalLM.from_pretrained(
             modeltype2path[model_name],
             dtype=torch.bfloat16,
