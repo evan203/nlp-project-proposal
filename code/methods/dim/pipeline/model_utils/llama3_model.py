@@ -99,7 +99,6 @@ class Llama3Model(ModelBase):
             model_path,
             dtype=dtype,
             trust_remote_code=True,
-            cache_dir="llm_weights",
             device_map="auto",
         ).eval()
 
