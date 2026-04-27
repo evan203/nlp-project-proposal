@@ -572,7 +572,7 @@ class RefusalCone(nn.Module):
         normalized_direction = normalized_direction.to(model.dtype)
         for layer in self.module.layers:
             self.ablate_input(layer, normalized_direction)
-            self.ablate_output(layer.self_attn, normalized_direction, 3)
+            self.ablate_output(layer.self_attn, normalized_direction, 2)
             self.ablate_output(layer.mlp, normalized_direction, 1)
     
     def ablate_output(self, layer, direction, tuple_length=1):
@@ -1137,7 +1137,7 @@ class DirectionalAblation(nn.Module):
         direction = direction.to(model.dtype)
         for layer in self.module.layers:
             self.ablate_input(layer, direction)
-            self.ablate_output(layer.self_attn, direction, 3)
+            self.ablate_output(layer.self_attn, direction, 2)
             self.ablate_output(layer.mlp, direction, 1)
     
     def ablate_output(self, layer, direction, tuple_length=1):
