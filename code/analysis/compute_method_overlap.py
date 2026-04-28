@@ -107,6 +107,7 @@ def compute_mso_for_direction(
                 pass
 
     for layer_idx in sorted(layer_indices):
+        print(f"Layer {layer_idx}/{max(layer_indices)} ...", flush=True)
         for wtype in weight_types:
             tensor_key = f"model.layers.{layer_idx}.{wtype}.weight"
             w_base = load_tensor_from_shards(tensor_key, base_shards)
@@ -117,9 +118,13 @@ def compute_mso_for_direction(
             w_actsvd = w_actsvd.float()
             delta_w = w_actsvd - w_base  # [out, in]
 
-            # SVD of delta_W
+            # Use randomized SVD for speed — we only need enough singular
+            # vectors to cover the threshold-based effective rank.
+            # Start with q=64; if threshold selects all of them, retry with
+            # full SVD (rare in practice).
+            q = min(64, *delta_w.shape)
             try:
-                U, S, Vh = torch.linalg.svd(delta_w, full_matrices=False)
+                U, S, V = torch.svd_lowrank(delta_w, q=q, niter=4)
             except Exception as e:
                 print(f"  SVD failed for {tensor_key}: {e}")
                 continue
