@@ -19,7 +19,7 @@
 )
 
 #front-slide(
-  title: "Examining the Superposition of Saftey and Utility in LLM Activation Spaces",
+  title: "Comparison of Safety Alignment Subspaces in LLMs",
   subtitle: [_Final Presentation_],
   authors: "Group 6: Evan Scamehorn, Kyle Sha, Adam Venton, Zeke Mackay, and Calvin Kosmatka",
   info: [#link("https://github.com/evan203/nlp-project-proposal")],
@@ -27,12 +27,12 @@
 
 #slide[
 
-  *Problem, Datasets, Metrics:*
+  *Problem & Motivation:*
 
-  - Aligned LLMs can produce harmful outputs using diverse jailbreaking techniques
-  - Safety subspaces are hypothesized to be represented in several different ways
-  - Alpaca (harmless prompts), JailbreakBench (harmful prompts)
-  - Attack Success Rate to evaluate performance
+  - Otherwise aligned LLMs can produce harmful outputs with a variety of jailbreaking techniques.
+    - Since these models are publicly available, developers are obliged to ensure safe usage.
+  - Mechanisms controlling query refusal are not well-understood.
+    - Several distinct methods have been developed to isolate model activation/weight subspaces dictating refusal
 
   // #line(length: 100%)
 ]
