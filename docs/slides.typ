@@ -20,7 +20,7 @@
 
 #front-slide(
   title: "Examining the Superposition of Saftey and Utility in LLM Activation Spaces",
-  subtitle: [_Midterm Project Update_],
+  subtitle: [_Final Presentation_],
   authors: "Group 6: Evan Scamehorn, Kyle Sha, Adam Venton, Zeke Mackay, and Calvin Kosmatka",
   info: [#link("https://github.com/evan203/nlp-project-proposal")],
 )
