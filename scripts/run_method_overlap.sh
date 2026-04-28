@@ -28,7 +28,8 @@ fi
 MODEL_ID="${MODEL_PATH##*/}"
 
 # Find the base model snapshot directory (directory containing the first safetensor file)
-BASE_MODEL_PATH="$(find "$HF_HOME" -name "*.safetensors" -path "*$MODEL_ID*" 2>/dev/null | head -1 | xargs -r dirname)"
+# Exclude .no_exist dirs which are HF cache placeholders, not real weights.
+BASE_MODEL_PATH="$(find "$HF_HOME" -name "*.safetensors" -path "*$MODEL_ID*" -not -path "*/.no_exist/*" 2>/dev/null | head -1 | xargs -r dirname)"
 
 if [[ -z "$BASE_MODEL_PATH" ]]; then
   echo "Warning: could not find base model safetensors for $MODEL_ID under $HF_HOME"
