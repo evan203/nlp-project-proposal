@@ -45,13 +45,17 @@ code/
     actsvd/                  ActSVD low-rank modification pipeline (Wei et al.).
     cones-repind/            RDO/RCO training and RepInd code (Wollschläger et al.).
   analysis/
-    plot_benchmarks.py       Safety-utility tradeoff plots.
+    plot_benchmarks.py       Safety-utility tradeoff plots; also TruthfulQA + LLM-judge bars.
     plot_method_overlap.py   DIM-vs-ActSVD MSO plots.
     plot_safety_utility_overlap.py  Direct safety-vs-utility overlap plots.
     plot_geometry_repind.py  RepInd heatmap and profile plots.
+    plot_attack_types.py     Probe scatter / boxplot / layer sweep / ablation cross-test plots.
     safety_utility_overlap.py      Direct overlap analysis runner.
     geometry_repind.py       RepInd cosine-profile comparison runner.
-    eval_direction_benchmark.py    Evaluate any direction .pt on JBB + harmless compliance.
+    eval_direction_benchmark.py    Evaluate any direction on JBB + harmless + PPL + TruthfulQA.
+    judge_completions.py     Post-hoc LLM judge: unmodified base Llama grades all saved completions.
+    probe_attack_types.py    Probe whether WildJailbreak prompts suppress the refusal direction
+                              (extends Arditi et al. §5.1; layer sweep + ablation cross-test).
   results/
     benchmark/               JBB ASR, harmless compliance, perplexity JSON + plots.
     method_overlap/          DIM-vs-ActSVD MSO JSON + plots.
@@ -67,11 +71,13 @@ Selected Papers/             Reference paper PDFs and extracted TeX.
 
 scripts/
   run_dim.sh                 Run DIM pipeline.
-  run_actsvd.sh              Run ActSVD pipeline.
+  run_actsvd.sh              Run ActSVD pipeline (paper-optimal r^u=3950, r^s=4090 by default).
   run_rco.sh                 Run RDO/RCO training.
   run_rco_eval.sh            Train RDO + extract direction + evaluate on benchmark + RepInd.
   run_safety_utility_overlap.sh  Run direct safety-vs-utility overlap analysis.
   run_geometry_repind.sh     Run lightweight RepInd analysis.
+  run_probe_attack_types.sh  Run prompt-attack probe (HarmBench + WildJailbreak), with
+                              optional LAYER_SWEEP=1 / ABLATION_CROSS=1 / BOOTSTRAP=1000.
   run_all_experiments.sh     End-to-end runner (all methods + figures).
   build_rco_directions_json.py   Extract trained direction from local wandb artifacts.
   sync_figures.py            Copy result plots to docs/figures/.
@@ -165,6 +171,47 @@ UTILITY_RANKS=1,2,4,8,16,32 PRIMARY_RANK=8 ./scripts/run_safety_utility_overlap.
 DIRECTIONS_JSON=code/results/geometry_repind/directions_rco.json \
   OUTPUT_DIR=code/results/geometry_repind_rco \
   ./scripts/run_geometry_repind.sh
+```
+
+### Prompt-attack probe
+
+Extends Arditi et al. §5.1's adversarial-suffix analysis from one GCG suffix on
+Qwen 1.8B to in-the-wild WildJailbreak prompts on Llama-3.1-8B, with a per-layer
+projection sweep, RCO-direction comparison, and an ablation cross-test that
+generates each prompt twice (base model and DIM-ablated).
+
+```bash
+# Run probe (HF_TOKEN required for WildJailbreak access)
+LAYER_SWEEP=1 ABLATION_CROSS=1 BOOTSTRAP=1000 ./scripts/run_probe_attack_types.sh
+```
+
+### Post-hoc LLM judge (consistent across methods)
+
+Loads the *unmodified* base Llama once and grades every saved
+`*_jbb_ablation_completions.json` with the same judge. Avoids the
+cross-method confound where DIM-ablated / ActSVD-modified / RCO-cone
+runs would otherwise judge themselves with the very intervention that
+compromised refusal.
+
+```bash
+cd code
+uv run python analysis/judge_completions.py \
+  --model_path meta-llama/Llama-3.1-8B-Instruct \
+  --benchmark_dir results/benchmark
+```
+
+### Random-direction sanity check
+
+Ablating a `N(0, I)` random unit vector should leave ASR near baseline.
+Standard counterfactual missing from all four reference papers.
+
+```bash
+cd code
+uv run python analysis/eval_direction_benchmark.py \
+  --model_path meta-llama/Llama-3.1-8B-Instruct \
+  --random_direction --seed 7 \
+  --method_name Random-Direction-7 \
+  --eval_ppl --eval_truthfulqa --bootstrap 1000
 ```
 
 ### Evaluate any saved direction

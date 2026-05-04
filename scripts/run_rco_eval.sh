@@ -90,11 +90,17 @@ echo "  Direction saved to: $DIRECTION_PT"
 if [[ "${SKIP_EVAL:-0}" != "1" ]]; then
   echo "[3/4] Evaluating direction on JailbreakBench and harmless compliance ..."
   cd "$CODE_DIR"
+  # NOTE: --llm_judge intentionally NOT passed here. The post-hoc
+  # analysis/judge_completions.py grades all methods with the unmodified
+  # base model in a single pass, avoiding the cross-method confound where
+  # a method's own intervention biases its self-judgment.
   $PYTHON_RUNNER analysis/eval_direction_benchmark.py \
     --model_path "$MODEL" \
     --direction_path "$DIRECTION_PT" \
     --method_name "$METHOD_NAME" \
     --eval_ppl --n_ppl_samples 64 \
+    --eval_truthfulqa --n_tqa_samples 64 \
+    --bootstrap 1000 \
     --output_dir results/benchmark
 
   echo ""

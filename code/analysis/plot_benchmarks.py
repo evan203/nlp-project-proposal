@@ -72,14 +72,72 @@ def add_bar_labels(ax, bars, fmt="{:.2f}") -> None:
 
 def plot_jailbreak_asr(data: dict, names, labels, colors) -> None:
     values = [data[name]["jailbreakbench"]["asr"] for name in names]
+    cis = [data[name]["jailbreakbench"].get("asr_ci_95") for name in names]
     fig, ax = plt.subplots(figsize=(max(6, len(names) * 1.4), 4))
     bars = ax.bar(labels, values, color=colors)
+    # Error bars (when bootstrap CIs are present in the JSON)
+    has_any_ci = any(ci for ci in cis)
+    if has_any_ci:
+        yerr_lo = [v - (ci[0] if ci else v) for v, ci in zip(values, cis)]
+        yerr_hi = [(ci[1] if ci else v) - v for v, ci in zip(values, cis)]
+        ax.errorbar(labels, values, yerr=[yerr_lo, yerr_hi], fmt="none",
+                    ecolor="black", capsize=3, linewidth=1)
     ax.set_ylim(0, 1.08)
     ax.set_ylabel("Attack success rate")
-    ax.set_title("JailbreakBench ASR")
+    title = "JailbreakBench ASR"
+    if has_any_ci:
+        title += "  (with bootstrap 95% CI)"
+    ax.set_title(title)
     add_bar_labels(ax, bars)
     fig.tight_layout()
     fig.savefig(OUT_DIR / "jailbreak_asr.png", dpi=180)
+    plt.close(fig)
+
+
+def plot_jailbreak_asr_with_judges(data: dict, names, labels, colors) -> None:
+    """Side-by-side substring vs LLM-judge ASR (when both present)."""
+    has_llm = any("asr_llm_judge" in data[name]["jailbreakbench"] for name in names)
+    if not has_llm:
+        return  # nothing new to render
+    sub_vals = [data[name]["jailbreakbench"]["asr"] for name in names]
+    llm_vals = [data[name]["jailbreakbench"].get("asr_llm_judge", float("nan"))
+                for name in names]
+    x = np.arange(len(names))
+    w = 0.4
+    fig, ax = plt.subplots(figsize=(max(6, len(names) * 1.4), 4))
+    ax.bar(x - w / 2, sub_vals, w, color=colors, alpha=0.55, edgecolor="white",
+           label="Substring judge")
+    ax.bar(x + w / 2, llm_vals, w, color=colors, alpha=0.95, edgecolor="white",
+           label="LLM judge (loaded model)")
+    ax.set_xticks(x); ax.set_xticklabels(labels, rotation=15, ha="right", fontsize=8)
+    ax.set_ylim(0, 1.08); ax.set_ylabel("ASR")
+    ax.set_title("JBB ASR — substring vs LLM judge")
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / "jailbreak_asr_judges.png", dpi=180)
+    plt.close(fig)
+
+
+def plot_truthfulqa(data: dict, names, labels, colors) -> None:
+    if not any("truthfulqa" in data[name] for name in names):
+        return
+    truth = [data[name].get("truthfulqa", {}).get("truthful_rate", float("nan"))
+             for name in names]
+    untruth = [data[name].get("truthfulqa", {}).get("untruthful_rate", float("nan"))
+               for name in names]
+    x = np.arange(len(names))
+    w = 0.4
+    fig, ax = plt.subplots(figsize=(max(6, len(names) * 1.4), 4))
+    ax.bar(x - w / 2, truth, w, color=colors, alpha=0.95, edgecolor="white",
+           label="Truthful")
+    ax.bar(x + w / 2, untruth, w, color=colors, alpha=0.45, edgecolor="white",
+           label="Untruthful")
+    ax.set_xticks(x); ax.set_xticklabels(labels, rotation=15, ha="right", fontsize=8)
+    ax.set_ylim(0, 1.0); ax.set_ylabel("Rate")
+    ax.set_title("TruthfulQA — substring grading\n(higher truthful = lower side-effect)")
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / "truthfulqa.png", dpi=180)
     plt.close(fig)
 
 
@@ -164,6 +222,8 @@ def main() -> None:
     names, labels, colors = _build_order(data)
     print(f"Methods in benchmark: {names}")
     plot_jailbreak_asr(data, names, labels, colors)
+    plot_jailbreak_asr_with_judges(data, names, labels, colors)
+    plot_truthfulqa(data, names, labels, colors)
     plot_harmless_compliance(data, names, labels, colors)
     plot_perplexity(data, names, labels, colors)
     plot_safety_utility_tradeoff(data, names, labels, colors)

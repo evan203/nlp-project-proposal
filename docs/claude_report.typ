@@ -59,6 +59,13 @@
   propose that this gap may partly explain why effective safety removal is
   behaviorally possible despite broad geometric entanglement, though we note
   that PCA overlap is not a direct measure of causal utility dependence.
+  Beyond reproducing the prior methods, we extend the adversarial-suffix
+  analysis of Arditi et al.'s §5.1 ("Adversarial suffixes suppress the
+  refusal-mediating direction") in four ways: (i) substituting Qwen 1.8B
+  with Llama-3.1-8B-Instruct, (ii) replacing a single GCG suffix with
+  in-the-wild WildJailbreak prompts, (iii) projecting at every layer rather
+  than one, and (iv) adding an ablation cross-test plus RCO-direction
+  comparison.
 ]
 
 = Introduction
@@ -115,6 +122,15 @@ three methods on the same model and asking:
 + *Causal independence.* Are multiple refusal directions causally independent,
   or does ablating one change the effect of another?
 
++ *Generalizing DIM's adversarial-suffix analysis.* Arditi et al.'s §5.1
+  shows that a single GCG-optimized adversarial suffix suppresses the
+  refusal direction at the EOI position on Qwen 1.8B Chat. Their analysis
+  is explicitly restricted to "a single model and a single adversarial
+  example." We ask whether the same suppression appears under the in-the-wild
+  prompt-wrapping attacks deployed models actually face, on a more recent
+  and larger model (Llama-3.1-8B-Instruct), and whether the suppression
+  is layer-localized or distributed (DIM looks at one layer).
+
 == Key Insight
 
 We hypothesize that the four papers may be simultaneously correct, because they
@@ -146,7 +162,12 @@ safety subspace. Weight orthogonalization
 $W'_("out") <- W_("out") - hat(bold(r))hat(bold(r))^T W_("out")$ permanently
 removes the direction from the model. They report minimal degradation on
 MMLU, ARC, and GSM8K, with the notable exception of TruthfulQA, which "veers
-close to the territory of refusal."
+close to the territory of refusal." Their §5.1 also studies *one*
+GCG-optimized adversarial suffix on Qwen 1.8B Chat and shows that
+appending it suppresses the cosine of the last-token activation with
+$hat(bold(r))$ relative to no-suffix and random-suffix conditions; this is
+explicitly limited to a single model and a single suffix and is what our
+probe extends.
 
 == ActSVD
 
@@ -300,6 +321,79 @@ Following #citet("pmlr-v267-wollschlager25a"), we measure layerwise cosine
 similarity profiles before and after ablating each direction. Lower profile
 change indicates greater representational independence.
 
+== Extending DIM's Adversarial-Suffix Analysis to In-the-Wild Attacks
+
+#citet("arditi2024")'s §5.1 shows that *one* GCG-optimized adversarial suffix
+suppresses the refusal direction at the EOI position on Qwen 1.8B Chat
+(Figure 5 of their paper plots last-token cosine similarity with $hat(bold(r))$
+under no-suffix vs random-suffix vs adversarial-suffix conditions). They flag
+this as restricted to a single model and a single suffix. We extend that
+analysis along four axes: (i) Llama-3.1-8B-Instruct in place of Qwen 1.8B,
+(ii) WildJailbreak in-the-wild prompt-wrapping attacks in place of one GCG
+suffix, (iii) projection at *every* block input rather than one layer, and
+(iv) two diagnostics that DIM does not run: a comparison against the RCO
+direction (which post-dates DIM), and a cross-test that runs the same probe
+prompts under DIM ablation to bound the share of refusal DIM mediates.
+
+For each prompt $p$, a single forward pass captures the residual stream at
+the DIM-selected layer at the end-of-instruction (EOI) token position and
+projects it onto the unit refusal direction:
+$ "proj"(p) = bold(h)_"EOI"^((l_*))(p) dot hat(bold(r)) $
+We project onto both the DIM and RCO directions and apply the
+substring-based refusal judge to the base model's completion.
+
+Three prompt groups: *direct_request* (HarmBench bare harmful), *adversarial_harmful*
+(WildJailbreak wrapped harmful), *adversarial_benign* (WildJailbreak wrapped
+benign --- a critical control: if wrapping alone drives projection drop,
+both adversarial groups should fall together). Three questions: (Q1) does
+wrapping suppress DIM relative to direct? (Q2) does it suppress RCO the same
+way --- if not, prompt attacks tap different geometry than RCO finds? (Q3)
+does benign-wrapped content suppress the direction --- if so, the wrapper,
+not the harmful intent, perturbs the subspace.
+
+The probe inverts the ablation comparison ("does removing the direction
+enable attacks?") and asks "do successful prompt attacks remove the
+direction?". The answers do not have to agree.
+
+= Experimental Settings
+
+All experiments target Llama-3.1-8B-Instruct on a single A100 GPU. The full
+pipeline is reproducible end-to-end via `notebooks/colab_end_to_end.ipynb`.
+
+*Datasets.* JailbreakBench #cite("jailbreakbench") provides 100 categorized
+harmful prompts for ASR. Harmless compliance and perplexity use Alpaca
+#cite("alpaca"); generic-text perplexity uses the Pile #cite("thepile").
+ActSVD calibration uses Alpaca-cleaned-no-safety (utility) and alignment SFT
+data (safety), following #citet("Wei2024Brittleness"). The prompt-attack
+probe uses HarmBench standard behaviors #cite("mazeika2024harmbench") for the
+direct-request baseline and WildJailbreak #cite("jiang2024wildteaming")
+`adversarial_harmful` / `adversarial_benign` splits for the wrapped and
+benign-control groups (streamed with shuffle buffer; gated, requires HF token).
+
+*Method hyperparameters.*
+- *DIM*: 128 harmful (Advbench split) and 128 harmless prompts; layer $l_*=11$
+  selected with KL- and steerability filtering.
+- *ActSVD*: 128 calibration samples; utility rank $r^u=3950$, safety rank
+  $r^s=4090$, matching #citet("Wei2024Brittleness")'s reported optimum
+  (effective $Delta W$ rank $approx 6$). An earlier aggressive setting
+  ($r^u=3000$, $r^s=4000$) caused outsized perplexity damage and is now
+  superseded.
+- *RCO*: 2-D cone, DIM-initialized, learning rate $1 times 10^(-3)$, batch
+  size 16, 1500 steps; refusal-scaling + surgical-ablation + KL-retain losses.
+
+*Evaluation harness.* JBB ASR (100 prompts) is graded by substring at
+eval time, then re-graded post-hoc by the *unmodified* base Llama
+("comply or refuse?") applied to every method's saved completions in a
+single consistent pass. Harmless compliance (100 prompts), Pile/Alpaca
+perplexity (64 each), TruthfulQA (64 questions, substring against
+`correct_answers` / `incorrect_answers`). All rates carry 1,000-sample
+bootstrap 95% CIs. A *random-direction baseline* ($cal(N)(0,I)$, seed 7)
+is added as a sanity check.
+Safety-utility overlap: PCA of 128 harmless activations, ranks
+$k in {1,2,4,8,16,32}$, primary $k=8$. RepInd: 32 prompt pairs, 3-D basis.
+*Probe* (75 prompts) adds a *layer sweep* (project at every block input)
+and an *ablation cross-test* (generate each prompt twice: base + DIM-ablated).
+
 = Results
 
 == Behavioral Benchmark
@@ -335,35 +429,42 @@ RCO achieves ASR of 1.00 with the smallest perplexity increase of any
 intervention method (13.95, barely above baseline), consistent with its explicit
 KL-divergence retain loss.
 
-The original ActSVD paper #cite("Wei2024Brittleness") similarly reports vanilla
-ASR of 0.67--0.71 on Llama-2-7B-chat (reaching $approx$1.0 only with adversarial
-suffixes), confirming that weight-surgery approaches achieve lower vanilla ASR
-than activation-space methods. Our more aggressive rank settings ($r^u=3000$,
-$r^s=4000$, effective $Delta W$ rank $approx$1000) compared to their optimal
-setting ($r^u=3950$, $r^s=4090$, effective rank $approx$6) likely contribute to
-the larger perplexity degradation we observe. They did not report perplexity,
-measuring utility only via zero-shot task accuracy, which may be less sensitive
-to the generation quality degradation that perplexity captures.
+ActSVD re-runs with paper-optimal $r^u=3950$, $r^s=4090$ (effective
+$Delta W$ rank $approx 6$). The earlier aggressive setting over-cut and is
+superseded.
+
+*Sanity check, judges, side-effect.* (i) A random-direction baseline (unit
+vector $cal(N)(0,I)$, seed 7) tests that ablation isn't lifting ASR
+regardless of which direction is removed. (ii) JBB ASR is graded twice:
+substring matching, and a post-hoc LLM judge using the *unmodified* base
+Llama applied to every method's saved completions in a single pass.
+Using the same loaded model as judge inside the per-method eval would be
+unsafe --- for DIM-ablated, ActSVD-modified, and RCO-cone runs the loaded
+model has hooks active or modified weights, so the very intervention that
+compromised refusal also compromises the judge. The post-hoc consistent
+judge removes that cross-method confound (a same-family bias remains).
+(iii) TruthfulQA (64 questions) tests #citet("pmlr-v267-wollschlager25a")'s
+claim that DIM hurts truthfulness more than RCO. All ASR / harmless /
+truthful rates carry 1,000-sample bootstrap 95% CIs in @tab_benchmark.
 
 == Cross-Method Geometric Agreement
 
 #figure(
   image("figures/subspace_mso_per_layer_avg.png", width: 90%),
-  caption: [Per-layer MSO between DIM/RCO directions and ActSVD weight-delta subspaces. Most layers are near the random baseline, indicating that activation-space and weight-space methods target geometrically distinct structures.],
+  caption: [Per-layer MSO between DIM/RCO directions and ActSVD weight-delta subspaces. Most layers sit near the random baseline; layer~10's MLP down-projection is the main hotspot ($7 times$ baseline).],
 ) <fig_mso_per_layer>
 
-DIM-vs-ActSVD MSO is near the random baseline for most layers (@fig_mso_per_layer).
-This indicates that the DIM direction does not lie within the column space of
-ActSVD's weight changes at most layers. However, layer 10's MLP down-projection
-is a notable exception, with MSO of 0.113 (7$times$ the random baseline of
-0.016). Layer 14 also shows mild elevation. This suggests that while the two
-methods target largely distinct geometric structures, they converge on a shared
-component in a small number of layers --- particularly around layers 10--14,
-which are near DIM's selected layer (11). Low MSO elsewhere does not rule out
-mechanistic overlap: the actual activation-space effect of ActSVD's weight edit
-depends on the input distribution, and two methods can achieve similar behavioral
-outcomes through partially distinct geometric structures. DIM-vs-RCO
-cosine similarity is 0.450, indicating moderate agreement: the gradient-optimized direction moved substantially from DIM's statistical estimate, consistent with the loss landscape having a meaningfully different optimum.
+DIM-vs-ActSVD MSO is near random for most layers, with a hotspot at
+layer~10's MLP down-projection ($"MSO" = 0.113$ vs random $0.016$) and mild
+elevation at layer~14. We treat this as *exploratory rather than conclusive*:
+the SVD bridge measures the column space ActSVD's edit *can* perturb, not its
+actual effect $Delta W bold(x)$ on real inputs. The behavioral benchmark, where
+both methods raise ASR, is the stronger evidence that they share *some* refusal
+mechanism, even if the bridge cannot pinpoint where. DIM-vs-RCO cosine
+similarity is $0.450$, indicating moderate agreement in activation space ---
+the gradient-optimized direction moved substantially from DIM's statistical
+estimate, consistent with the loss landscape having a meaningfully different
+optimum.
 
 == Safety-Utility Overlap: The Central Finding
 
@@ -435,128 +536,114 @@ directions, but not vice versa --- consistent with
 #citet("pmlr-v267-wollschlager25a")'s finding that multiple independent refusal
 mechanisms exist, with a hierarchy of causal influence.
 
+== Prompt-Based Jailbreaks vs.\ the Refusal Direction
+
+#figure(
+  image("figures/probe_asr_and_projection_by_attack_type.png", width: 90%),
+  caption: [ASR (left) and mean DIM/RCO projection (right) per prompt group.],
+) <fig_probe_asr_proj>
+
+#figure(
+  image("figures/probe_dim_vs_rco_projection_scatter.png", width: 55%),
+  caption: [Per-prompt DIM (x) vs RCO (y) projection. $circle$ = jailbroken, $times$ = refused.],
+) <fig_probe_dim_rco>
+
+#figure(
+  image("figures/probe_layer_sweep_projection.png", width: 90%),
+  caption: [*Layer sweep:* per-layer mean DIM/RCO projection per group, $plus.minus$SE bands.],
+) <fig_probe_layer>
+
+#figure(
+  image("figures/probe_ablation_cross_test.png", width: 60%),
+  caption: [*Ablation cross-test:* same probe prompts under base vs DIM-ablated models.],
+) <fig_probe_abl>
+
+#emph[The figures above are placeholders. Per-prompt projections,
+per-layer trajectories, and the ablation-cross-test ASRs (with bootstrap
+95% CIs) will overwrite them once the Colab run completes; predictions
+below that the data contradicts will be revised at that point.]
+
+Three predictions follow from the hypothesis that DIM/RCO identify the
+genuine mediator of refusal: *(P1)* successful adversarial-harmful prompts
+should show *lower* DIM projection than direct harmful requests, and
+jailbroken cases should cluster at low projections
+(@fig_probe_asr_proj, @fig_probe_dim_rco); *(P2)* DIM and RCO projections
+should track each other but imperfectly, since $"cos"("DIM","RCO") = 0.450$
+(@fig_probe_dim_rco); *(P3)* benign-wrapped controls should *not* be
+suppressed --- if they are, the direction is more like a wrapper-style
+detector than a refusal mediator and the geometric methods' "safety"
+interpretation is overstated. *Layer sweep* (@fig_probe_layer) tests
+whether suppression is layer-localized around $l_*=11$ or distributed
+across late layers. *Ablation cross-test* (@fig_probe_abl) bounds the
+share of refusal DIM mediates: the gap between direct base-ASR and direct
+ablated-ASR is what prompt attacks cannot reach by themselves.
+
 = Discussion
 
-== Reconciling the Conflicting Claims
+*Reconciling the four claims (hypothesis, not proof).* The papers may
+partly disagree because they measure different objects: DIM's "clean
+separation" is about a *selected* direction (KL-filtered on harmless
+prompts, implicitly minimizing utility entanglement); Safety Subspaces'
+"no separation" is about the *full* subspace ($98 times$ random PCA
+overlap); ActSVD's "separable with effort" is the gap between the two
+(raw safety ranks overlap utility, hence the $(I - Pi^u)$ projection);
+and the Geometry paper's multi-dimensionality matches our RepInd
+asymmetry, where DIM dominates but does not exhaust refusal. Genuine
+model/dataset/judge differences likely also contribute.
 
-Our results are consistent with the following interpretation, which we advance as
-a hypothesis rather than a proven conclusion. The apparent contradiction between
-the reference papers may partly arise from measuring different quantities:
-
-+ *DIM's "clean separation" claim* is supported by behavioral results: the
-  _selected_ direction achieves high ASR with minimal utility cost. However, this
-  direction is chosen by a selection procedure that filters by KL divergence on
-  harmless prompts, which may implicitly select for low utility entanglement.
-
-+ *The Safety Subspaces "no separation" claim* is consistent with our geometric
-  finding that the _full_ per-layer safety subspace has above-random overlap
-  with utility PCA bases. However, our PCA-based utility definition is a proxy;
-  high PCA overlap does not prove that ablation would degrade utility, only
-  that the directions are not orthogonal to the dominant harmless-activation basis.
-
-+ *ActSVD's "separable with effort" claim* is consistent with both: the raw
-  safety ranks overlap with utility (motivating the orthogonal projection), and
-  after disentanglement a surgical cut is possible, albeit with more utility
-  degradation than DIM.
-
-+ *The Geometry paper's multi-dimensionality claim* is supported by the RepInd
-  asymmetry: the DIM direction appears dominant but not exhaustive, and derived
-  candidate directions show partial independence. However, our candidates are
-  DIM-derived rather than fully optimized RepInd vectors, limiting the strength
-  of this conclusion.
-
-Some of the original disagreement across papers may also reflect genuine
-differences in models, datasets, or evaluation definitions rather than
-contradictory truths about a single underlying phenomenon.
-
-== Why Different Methods Find Different Structures
-
-DIM-vs-ActSVD MSO is near random baseline for most layers. This does not
-necessarily mean the methods target unrelated phenomena. ActSVD and DIM may
-achieve similar behavioral outcomes through partially distinct mechanisms;
-the low MSO tells us that the DIM direction does not lie in the column space of
-ActSVD's weight changes, but the actual effect of those weight changes also
-depends on the input distribution, which the SVD bridge does not capture.
-
-The behavioral convergence (both increase ASR) despite geometric divergence
-(low MSO) could indicate either that (a) different geometric interventions
-can disrupt the same downstream refusal computation, or (b) the methods
-are disrupting different pathways that independently contribute to refusal.
-Our data does not conclusively distinguish these possibilities.
+*Probe takeaway.* If the predictions hold, the result generalizes
+DIM §5.1 from one GCG suffix on Qwen 1.8B to a population of WildJailbreak
+attacks on Llama-3.1-8B, and the layer-sweep + ablation cross-test
+diagnostics give two readings DIM did not provide. The cross-method
+DIM-vs-ActSVD MSO, by contrast, measures the column space ActSVD's edit
+*can* perturb rather than its actual effect; we treat it as exploratory
+and the behavioral benchmark + probe as load-bearing.
 
 == Limitations
 
-- All experiments use a single model (LLaMA-3.1-8B-Instruct). Generalization
-  to other model families and sizes is untested. Some of the reference papers'
-  disagreements may reflect genuine model-level differences.
-- *PCA utility $eq.not$ causal utility.* The utility subspace is defined by PCA
-  on harmless activations, which captures dominant _variation_ directions.
-  Directions causally responsible for utility may differ from high-variance
-  directions. Low MSO with utility PCA does not prove low utility damage.
-- *SVD bridge measures capacity, not effect.* The weight-delta MSO measures
-  whether a direction lies within the column space of $Delta W$, but the actual
-  activation change is $Delta W bold(x)$, which depends on input distribution.
-  High MSO does not guarantee the edit actually affects that direction on real
-  prompts.
-- *Dimensionality confound in full-vs-selected MSO comparison.* Averaging MSO
-  over 32 per-layer directions and comparing against a single selected direction
-  confounds the effect of selection with the natural tendency of single directions
-  to have lower overlap than direction averages.
-- *Activation-delta compression.* The ActSVD delta-activation vector averages
-  over prompts, hiding prompt-dependent effects, variance changes, and nonlinear
-  downstream interactions.
-- *Geometric overlap $eq.not$ causal mechanism.* Directions can be geometrically
-  close but causally irrelevant, or geometrically distant but behaviorally
-  equivalent. Our geometric analyses provide suggestive evidence, not causal proof.
-- RCO training uses a 2-dimensional cone. The Geometry paper finds cones up to
-  dimension 5; higher-dimensional cones might reveal additional structure.
-- RepInd is evaluated using DIM-derived cone-basis candidates rather than fully
-  optimized RepInd vectors, limiting the causal independence conclusions.
+- *Single model.* All experiments use Llama-3.1-8B-Instruct; some inter-paper
+  disagreements may be model-specific.
+- *PCA utility $eq.not$ causal utility.* The utility subspace is defined by
+  variance, not causal contribution; low MSO does not prove low utility damage.
+- *SVD bridge measures capacity, not effect.* DIM-vs-ActSVD MSO does not capture
+  $Delta W bold(x)$ on real inputs, so its negative result is suggestive only.
+- *Dimensionality confound* in the full ($32$ directions averaged) vs
+  selected (single direction) MSO comparison.
+- *RepInd uses DIM-derived candidates*, not fully optimized independent vectors,
+  limiting strength of the causal-independence conclusions.
+- *Probe sample size.* 25 prompts per group with a substring-based refusal
+  judge $arrow.r$ wide CIs, partial refusals may be misclassified.
+- *Same-family LLM judge.* The post-hoc judge is the unmodified base
+  Llama, so it removes the cross-method confound but retains a
+  same-family bias (Llama judging Llama). A separate classifier
+  (e.g.\ HarmBench's Llama-2-13B-cls) or a frontier model would be
+  stronger but requires extra GPU memory or an API key.
 
 = Conclusion
 
-We reproduce DIM, ActSVD, and RCO on LLaMA-3.1-8B-Instruct and compare them at
-behavioral, geometric, and causal levels. We find that the per-layer DIM safety
-subspace shows substantially above-random overlap with PCA-based utility
-subspaces, consistent with #citet("Ponkshe2026Safety")'s entanglement claim. At
-the same time, each method's selected direction has lower overlap with utility,
-and the behavioral benchmark confirms that effective safety removal with
-preserved utility is empirically achievable, consistent with #citet("arditi2024").
+We reproduce DIM, ActSVD, and RCO on Llama-3.1-8B-Instruct and compare
+them behaviorally, geometrically, and causally. The full per-layer safety
+subspace is entangled with utility PCA bases ($98 times$ random), but
+selected directions have lower overlap and preserve utility behaviorally
+--- a gap that may partly explain the literature's contradictions. Our
+prompt-attack probe extends #citet("arditi2024")'s §5.1 adversarial-suffix
+analysis from one GCG suffix on Qwen 1.8B to in-the-wild WildJailbreak
+attacks on Llama-3.1-8B, with two diagnostics they do not run: a per-layer
+projection sweep and an ablation cross-test that bounds the share of
+refusal DIM mediates. The probe is more incremental than groundbreaking;
+its value is a controlled comparison on a recent model and attack
+distribution, plus the RCO direction (which post-dates DIM).
 
-We propose that this gap between full-subspace and selected-direction overlap may
-partly explain the apparent contradiction in the literature, though we
-acknowledge that PCA overlap is a proxy for causal utility dependence, and that
-the dimensionality difference between the comparisons introduces a confound.
-The behavioral benchmark, not the geometric analysis, is the definitive test of
-utility preservation.
+= Member Contributions
 
-DIM-vs-ActSVD geometric overlap is near random, indicating that activation-space
-and weight-space methods may achieve similar behavioral outcomes through
-partially distinct mechanisms. The RepInd analysis suggests that refusal is not
-exhausted by a single direction, consistent with the multi-dimensional findings
-of #citet("pmlr-v267-wollschlager25a"), though our DIM-derived candidates are
-weaker surrogates for fully optimized independent directions.
-
-These findings suggest that improving alignment robustness requires considering
-the multi-dimensional nature of the safety subspace and its entanglement with
-utility representations, while recognizing that the limits of linear
-subspace-based analyses leave open the possibility of more complex, nonlinear
-safety-utility interactions that our methods cannot capture.
-
-
-= Data Sets
-
-We use two primary evaluation datasets. JailbreakBench #cite("jailbreakbench")
-provides 100 harmful prompts across multiple categories for measuring attack
-success rate. The DIM pipeline's internal datasets provide paired harmful and
-harmless instruction sets for computing mean-diff directions and evaluating
-refusal behavior. Alpaca #cite("alpaca") provides harmless instruction data for
-utility evaluation (harmless compliance and perplexity). The Pile
-#cite("thepile") provides general text for perplexity measurement.
-
-For ActSVD calibration, we use Alpaca-cleaned-no-safety (utility calibration)
-and alignment SFT data (safety calibration), following
-#citet("Wei2024Brittleness")'s methodology.
+All five authors contributed to writing and research-design discussion.
+Effort (totaling 100%):
+*Evan Scamehorn (25%)* --- DIM/ActSVD Colab pipelines and behavioral benchmark.
+*Adam Venton (15%)* --- safety-utility overlap, weight-delta SVD bridge.
+*Calvin Kosmatka (15%)* --- literature survey, intro drafting.
+*Kyle Sha (25%)* --- prompt-attack probe (incl.\ layer sweep + ablation
+cross-test), WildJailbreak integration, Discussion.
+*Zeke Mackay (20%)* --- RepInd analysis, RCO training, asymmetry interpretation.
 
 
 #pagebreak()

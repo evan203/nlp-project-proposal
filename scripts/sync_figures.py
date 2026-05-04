@@ -13,6 +13,8 @@ DOC_FIGURES = ROOT / "docs" / "figures"
 FIGURE_MAP = {
     ROOT / "code/results/benchmark/jailbreak_asr.png": DOC_FIGURES / "benchmark_jailbreak_asr_overall.png",
     ROOT / "code/results/benchmark/jailbreak_asr_per_category.png": DOC_FIGURES / "benchmark_jailbreak_asr_per_category.png",
+    ROOT / "code/results/benchmark/jailbreak_asr_judges.png": DOC_FIGURES / "benchmark_jailbreak_asr_judges.png",
+    ROOT / "code/results/benchmark/truthfulqa.png": DOC_FIGURES / "benchmark_truthfulqa.png",
     ROOT / "code/results/benchmark/perplexity_comparison.png": DOC_FIGURES / "benchmark_perplexity_pile_alpaca.png",
     ROOT / "code/results/benchmark/safety_utility_tradeoff.png": DOC_FIGURES / "benchmark_safety_utility_tradeoff.png",
     ROOT / "code/results/method_overlap/mso_heatmap.png": DOC_FIGURES / "subspace_mso_heatmap_layer_by_weight.png",
@@ -23,6 +25,13 @@ FIGURE_MAP = {
     ROOT / "code/results/safety_utility_overlap/safety_utility_overlap_by_rank.png": DOC_FIGURES / "safety_utility_overlap_by_rank.png",
     ROOT / "code/results/geometry_repind/repind_change_heatmap.png": DOC_FIGURES / "repind_change_heatmap.png",
     ROOT / "code/results/geometry_repind/repind_dim_pair_profiles.png": DOC_FIGURES / "repind_dim_pair_profiles.png",
+    ROOT / "code/results/probe_attack_types/scatter_projection_vs_outcome.png": DOC_FIGURES / "probe_scatter_projection_vs_outcome.png",
+    ROOT / "code/results/probe_attack_types/boxplot_projection_by_attack_type.png": DOC_FIGURES / "probe_boxplot_projection_by_attack_type.png",
+    ROOT / "code/results/probe_attack_types/asr_and_projection_by_attack_type.png": DOC_FIGURES / "probe_asr_and_projection_by_attack_type.png",
+    ROOT / "code/results/probe_attack_types/correlation_projection_vs_asr.png": DOC_FIGURES / "probe_correlation_projection_vs_asr.png",
+    ROOT / "code/results/probe_attack_types/dim_vs_rco_projection_scatter.png": DOC_FIGURES / "probe_dim_vs_rco_projection_scatter.png",
+    ROOT / "code/results/probe_attack_types/layer_sweep_projection.png": DOC_FIGURES / "probe_layer_sweep_projection.png",
+    ROOT / "code/results/probe_attack_types/ablation_cross_test.png": DOC_FIGURES / "probe_ablation_cross_test.png",
 }
 
 # RCO repind results override the DIM-derived ones if available
