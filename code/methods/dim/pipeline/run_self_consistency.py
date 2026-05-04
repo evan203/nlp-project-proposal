@@ -94,7 +94,7 @@ def run_pipeline(model_path):
     # 1. Generate candidate refusal directions
     candidate_directions = generate_and_save_candidate_directions(cfg, model_base, harmful_train, harmless_train)
 
-    self_consistency_candidate_directions = generate_and_save_candidate_directions(cfg, model_base, harmful_self_consistency, harmelss_self_consistency, self_consistency=True)
+    self_consistency_candidate_directions = generate_and_save_candidate_directions(cfg, model_base, harmful_self_consistency, harmless_self_consistency, self_consistency=True)
 
     cos = nn.CosineSimilarity(dim=-1)
 
