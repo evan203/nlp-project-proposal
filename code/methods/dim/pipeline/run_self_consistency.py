@@ -101,6 +101,7 @@ def run_pipeline(model_path):
     similarity = cos(candidate_directions, self_consistency_candidate_directions)
     average = torch.mean(similarity, dim=1)
     print(average)
+    torch.save(average, os.path.join(cfg.artifact_path(), f'generate_directions/layer_self_consistency.pt'))
 
 
 if __name__ == "__main__":
