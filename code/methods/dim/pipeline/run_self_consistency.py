@@ -15,6 +15,9 @@ from pipeline.submodules.select_direction import select_direction, get_refusal_s
 from pipeline.submodules.evaluate_jailbreak import evaluate_jailbreak
 from pipeline.submodules.evaluate_loss import evaluate_loss
 
+import torch.nn as nn
+import torch
+
 def parse_arguments():
     """Parse model path argument from command line."""
     parser = argparse.ArgumentParser(description="Parse model path argument.")
