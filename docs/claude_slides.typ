@@ -126,7 +126,7 @@
 
   - *Model:* Llama-3.1-8B-Instruct on a single A100 (40 GB).
   - *DIM:* layer 11 selected, KL- and steerability-filtered.
-  - *ActSVD:* utility rank 3000, safety rank 4000, all linear layers.
+  - *ActSVD:* utility rank 3950, safety rank 4090, all linear layers.
   - *RCO:* 2-D cone, DIM-initialized, refusal-scaling + surgical-ablation + KL-retain loss.
   - *Behavioral:* JailbreakBench (100), 100 harmless Alpaca, 64 Pile + 64 Alpaca perplexity.
   - *Overlap PCA:* 128 harmless instruction activations at EOI; ranks $k in {1,2,4,8,16,32}$.
@@ -150,14 +150,15 @@
     [*Method*], [*ASR*], [*Harmless*], [*PPL Pile*], [*PPL Alpaca*],
     [Base],            [0.15], [1.00], [13.93], [8.60],
     [DIM-Ablated],     [*1.00*], [1.00], [14.17], [8.80],
-    [ActSVD-Modified], [0.62], [1.00], [19.91], [10.61],
-    [RCO-Cone-2],      [*1.00*], [1.00], [13.95], [8.63],
+    [ActSVD-Modified], [0.77], [1.00], [19.94], [11.41],
+    [RCO-Cone-2],      [*1.00*], [1.00], [13.97], [8.62],
+    [Random-Dir-7],    [0.16], [0.98], [14.65], [8.86],
   )
 
   #v(0.6em)
-  - *DIM and RCO* both fully break safety (ASR $1.00$) with near-zero perplexity cost.
-  - *ActSVD* reaches only ASR $0.62$ but pays much higher PPL — the weight surgery is less surgical than the activation ablations.
-  - All three preserve harmless compliance — the *behavioral* claim of "clean separation" holds.
+  - *DIM and RCO* both fully break substring safety (ASR $1.00$) with near-zero perplexity cost.
+  - *ActSVD* reaches ASR $0.77$ but pays much higher PPL — the weight surgery is less surgical than the activation ablations.
+  - *Random ablation* stays near base ASR, so this is direction-specific.
 ]
 
 // -------------------------------------------------------------------------
@@ -172,7 +173,7 @@
     image("figures/subspace_mso_per_layer_avg.png", width: 100%),
     [
       #v(0.6em)
-      - DIM-vs-ActSVD MSO is near random for most layers; hotspot at layers 10–14.
+      - DIM-vs-ActSVD MSO is near random for most layers; layer 10 down/o projections are the clear hotspots.
       - DIM-vs-RCO cosine $= 0.450$.
 
       *But*: the SVD bridge measures *capacity*, not *effect* on real inputs.
@@ -197,7 +198,7 @@
     [Full DIM mean-diffs (avg)], [*0.191*], [98×],
     [DIM selected (layer 11)],   [0.078], [40×],
     [RCO direction],             [0.004], [1.8×],
-    [ActSVD activation $delta$], [0.124], [63.5×],
+    [ActSVD activation $delta$ avg.], [0.067], [34×],
     [Random baseline],           [0.00195], [1×],
   )
 
@@ -234,7 +235,7 @@
 // Slide 11: Probe results — new experiment (predictions; numbers from Colab)
 // -------------------------------------------------------------------------
 #slide[
-  *Result 5 (new): does prompt-based jailbreaking suppress the refusal direction?* #text(size: 0.65em)[(figure + numbers fill in from Colab run)]
+  *Result 5 (new): prompt wrappers suppress the refusal direction, but not only for harmful prompts*
 
   #grid(
     columns: (1.3fr, 1fr),
@@ -242,13 +243,13 @@
     image("figures/probe_asr_and_projection_by_attack_type.png", width: 100%),
     [
       #v(0.4em)
-      *Predictions:*
-      - *Direct $arrow.r$ adv-harmful*: ASR rises, projection drops (both DIM, RCO).
-      - *Adv-benign control*: projection stays near direct (wrapping alone shouldn't suppress).
+      *Observed:*
+      - Direct $arrow.r$ adv-harmful: ASR $0.12 arrow.r 0.36$, DIM projection $3.17 arrow.r 1.11$.
+      - Adv-benign control drops too: DIM projection $0.66$.
       - DIM/RCO track each other imperfectly (cosine = 0.45).
 
       #v(0.3em)
-      If predictions hold: replicates DIM §5.1's suppression effect on a different model + attack distribution.
+      *Takeaway:* suppression generalizes DIM §5.1, but wrapper style is a confound.
     ],
   )
 ]
@@ -257,7 +258,7 @@
 // New: layer sweep + ablation cross-test (probe extensions)
 // -------------------------------------------------------------------------
 #slide[
-  *Probe extensions: where attacks act + ablation bound* #text(size: 0.65em)[(figures fill in from Colab run)]
+  *Probe extensions: where attacks act + ablation bound*
 
   #grid(
     columns: (1fr, 1fr),
@@ -266,8 +267,8 @@
     image("figures/probe_ablation_cross_test.png", width: 100%),
   )
 
-  - *Layer sweep:* tells us *where* attacks act --- is the direct-vs-adv-harmful gap layer-localized around DIM's $l_*=11$, or distributed across late layers?
-  - *Ablation cross-test:* gap between direct base-ASR and direct ablated-ASR bounds the share of refusal mediated by DIM that prompt attacks can't reach.
+  - *Layer sweep:* DIM gap peaks around $l_*=11$; RCO grows later, suggesting related but more distributed geometry.
+  - *Ablation cross-test:* direct ASR jumps $0.12 arrow.r 0.96$ under DIM ablation; adversarial groups reach $1.00$.
 ]
 
 // -------------------------------------------------------------------------
@@ -277,8 +278,8 @@
   *Methodological additions (sanity checks + side-effect tests)*
 
   - *Random-direction baseline.* Ablate a Gaussian-sampled unit vector. ASR should stay near $0.15$ (sanity check none of the four reference papers does explicitly).
-  - *LLM-graded judge.* Post-hoc pass: the *unmodified* base Llama grades every method's saved completions in one go. Avoids the cross-method confound where a modified model's intervention biases its self-judgment. Same-family bias remains, documented in limitations.
-  - *TruthfulQA.* 64 questions, substring vs `correct/incorrect_answers`. Tests Wollschläger's claim that DIM hurts truthfulness more than RCO.
+  - *LLM-graded judge.* Post-hoc pass with unmodified base Llama avoids intervention-biased self-judging, but disagrees strongly with substring ASR; we treat it as diagnostic, not definitive.
+  - *TruthfulQA.* 64 questions, substring vs `correct/incorrect_answers`; mostly ambiguous, so only a weak side-effect check.
   - *Bootstrap 95% CI* on ASR, harmless compliance, and projection means.
   - *ActSVD re-run* with paper-optimal ($r^u=3950$, $r^s=4090$) instead of our earlier aggressive setting.
 ]
@@ -296,7 +297,7 @@
 
   *They are measuring different objects.* The methods don't contradict each other once you separate _full subspace_ from _selected direction_, and _capacity_ from _causal effect_.
 
-  *Our probe* extends this picture beyond the four papers: real attacks tap the same direction the methods identify, but only partially.
+  *Our probe* extends this picture beyond the four papers: real wrappers tap related refusal geometry, but the benign control shows wrapper style also drives suppression.
 ]
 
 // -------------------------------------------------------------------------
@@ -311,6 +312,7 @@
   - Activation-delta vector is a mean — hides prompt-dependent and nonlinear effects.
   - RepInd uses DIM-derived candidates rather than fully optimized RepInd vectors.
   - Probe uses a substring-based refusal judge over 75 prompts; wide CIs.
+  - Base-Llama judge and TruthfulQA substring check are weak diagnostics, not validated graders.
 ]
 
 // -------------------------------------------------------------------------
