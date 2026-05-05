@@ -99,14 +99,14 @@ def run_pipeline(model_path):
 
     self_consistency_candidate_directions = generate_and_save_candidate_directions(cfg, model_base, harmful_self_consistency, harmless_self_consistency, self_consistency=True)
 
-    print(candidate_directions.dim())
+    print(candidate_directions.size())
 
     cos = nn.CosineSimilarity(dim=-1)
 
     similarity = cos(candidate_directions, self_consistency_candidate_directions)
-    print(similarity.dim())
+    print(similarity.size())
     average = torch.mean(similarity, dim=1)
-    print(average.dim())
+    print(average.size())
     print(average)
     torch.save(average, os.path.join(cfg.artifact_path(), f'generate_directions/layer_self_consistency.pt'))
 
