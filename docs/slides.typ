@@ -202,7 +202,7 @@
     columns: (2fr, 1fr),
     gutter: 12pt,
     [
-      #image("figures/DIM_ActSVD_act_comp.png", height: 50%)
+      #image("figures/DIM_ActSVD_act_comp.png", height: 90%)
     ],
     [
       #text(size: 0.75em)[
@@ -222,7 +222,7 @@
     columns: (2fr, 1fr),
     gutter: 12pt,
     [
-      #image("figures/Base_act_comp.png", height: 50%)
+      #image("figures/Base_act_comp.png", height: 90%)
     ],
     [
       #text(size: 0.75em)[
