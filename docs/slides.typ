@@ -39,23 +39,24 @@
 
 #slide[
 
-  *Safety Subspace Generation Methods:*
+  *Refusal Subspace Generation Methods:*
 
   - Difference-in-means (DIM) @arditi2024
     - Mean response activation difference between harmful and harmless prompts
   - Refusal Cone Optimization (RCO) @pmlr-v267-wollschlager25a
     - Use gradient descent to generate multiple basis vectors representing safety mechanisms
   - ActSVD safety/utility ranks @Wei2024Brittleness
-    - Perform Singular Value Decomposition on model weights to identify safety/utility-critical low-rank matrices
+    - Perform Singular Value Decomposition on model weights to identify safety-critical low-rank matrices
 ]
 
 #slide[
-  *Comparison Methods:*
+  *Comparison Experiment:*
 
-  - Mode Subspace Overlap (MSO) @Ponkshe2026Safety
-    - Performs SVD to quantify overlap between subspaces
-  - Representational Independence (RepInd) @pmlr-v267-wollschlager25a
-    - Performs cosine similarity on ablated model activations to test independence of multiple subspaces
+  - Benchmark four versions of *Llama-3.1-8B-Instruct*: one base aligned model and models with each method ablated.
+    - Evaluated on 100 harmful prompts from *JailbreakBench* and 100 harmless prompts from *Alpaca*.
+    - *Attack Success Rate*: proportion of harmful prompts answered by model. Compliance on harmless prompts should remain at 100%.
+  - Perform Mean Subspace Overlap (MSO) and Cosine Similarity between ablated model weights & activations
+    - 
 
 ]
 
