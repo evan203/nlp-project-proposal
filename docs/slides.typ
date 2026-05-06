@@ -51,7 +51,7 @@
 #slide[
   *Comparison Experiment:*
 
-  - Benchmark four versions of *Llama-3.1-8B-Instruct*: one base aligned model and models with each method ablated.
+  - Benchmark five versions of *Llama-3.1-8B-Instruct*: one base aligned model, one model with a random direction ablated, and models with each ablation method.
     - Evaluated on 100 harmful prompts from *JailbreakBench* and 100 harmless prompts from *Alpaca*.
     - *Attack Success Rate*: proportion of harmful prompts answered by model. Compliance on harmless prompts should remain at 100%.
   - Perform Mean Subspace Overlap (MSO) and Cosine Similarity between ablated model weights & activations
@@ -60,58 +60,20 @@
 
 #slide[
   *Findings — Safety Benchmarks:*
-
-  We benchmark three variants of *Llama-3.1-8B-Instruct*:
-  + *Base* — the original aligned model
-  + *DIM-Ablated* — refusal direction projected out at layer 11 @arditi2024
-  + *ActSVD-Modified* — low-rank safety-critical weight components removed @Wei2024Brittleness
-
-  - DIM ablation raises JBB ASR from 0.16 to 1.00 with little perplexity change.
-  - ActSVD raises JBB ASR to 0.63 but causes larger Pile/Alpaca perplexity degradation.
-  - DIM vs ActSVD MSO is near random for most layers, with a mild hotspot around layer 10.
-  - Direct safety-vs-utility overlap is above random: rank-8 mean MSO = 0.192 vs 0.00195 random baseline.
-  - RepInd profile test is asymmetric: ablating DIM strongly changes one derived basis profile, but ablating that basis barely changes DIM.
-
   #table(
     columns: (auto, auto, auto, auto, auto),
     align: (left, center, center, center, center),
     [*Model*], [*JBB ASR*], [*Harmless*], [*Pile PPL*], [*Alpaca PPL*],
-    [Base], [0.16], [1.00], [8.69], [6.01],
-    [DIM-Ablated], [1.00], [1.00], [8.75], [6.13],
-    [ActSVD-Modified], [0.63], [1.00], [13.09], [6.82],
+    [Base], [0.15], [1.00], [13.93], [8.60],
+    [Random-Dir-Ablated], [0.16], [0.98], [14.65], [8.86],
+    [DIM-Ablated], [1.00], [1.00], [14.17], [8.80],
+    [ActSVD-Modified], [0.77], [1.00], [19.94], [11.41],
+    [RCO-Cone-Ablated], [1.00], [1.00], [13.97], [8.62],
   )
-]
 
-
-#slide[
-  *Findings — Jailbreak ASR:*
-
-  #grid(
-    columns: (1fr, 1fr),
-    gutter: 12pt,
-    [
-      #image("figures/benchmark_jailbreak_asr_overall.png", height: 50%)
-    ],
-    [
-      #text(size: 0.75em)[
-        DIM ablation achieves *100 % ASR* — complete safety removal across every harm category. ActSVD reaches *63 %* — partial removal only.
-
-        The per-category breakdown reveals ActSVD is *non-uniform*: 0.9 on Disinformation, Expert advice, Malware — but only 0.2 on Harassment and 0.0 on Sexual content.
-
-        _Benchmark: JailbreakBench @jailbreakbench — 100 prompts, 10 harm categories. Compliance via refusal-prefix matching._
-      ]
-    ],
-  )
-]
-
-#slide[
-  *Findings — Per-Category Jailbreak ASR:*
-
-  #image("figures/benchmark_jailbreak_asr_per_category.png", width: 80%, height: 55%)
-
-  #text(
-    size: 0.7em,
-  )[ActSVD's weight pruning removes safety *non-uniformly* — it largely fails on socially sensitive categories (Harassment, Sexual content) while succeeding on more technical harms (Malware, Disinformation). DIM is uniformly effective.]
+  - Random ablation remains similar to base model.
+  - DIM and RCO both fully break safety with low perplexity cost.
+  - ActSVD reaches ASR 0.77 but with higher PPL cost - weight ablations are less effective than activation ablations.
 ]
 
 #slide[
@@ -133,45 +95,15 @@
   )[Perplexity on *The Pile* @thepile (general text) and *Alpaca* @alpaca (instructions). DIM barely impacts capability (*+0.7 %* Pile PPL). ActSVD causes *+51 %* Pile PPL degradation — its distributed weight modifications damage general language modelling. The safety–utility scatter (right) shows DIM *dominates* ActSVD on both axes.]
 ]
 
-#slide[
-  *Findings — MSO Heatmap (DIM vs ActSVD):*
-
-  #grid(
-    columns: (50%, 50%),
-    gutter: 12pt,
-    [
-      #image("figures/subspace_mso_heatmap_layer_by_weight.png", height: 85%, fit: "contain")
-    ],
-    [
-      #text(size: 0.65em)[
-        Maximum Subspace Overlap (MSO) @Ponkshe2026Safety measures overlap of the DIM refusal direction with ActSVD's weight-delta subspace per layer and weight type.
-
-        Most cells are *near random baseline* ($approx k_A dot k_B \/ d$) — the two methods find *nearly orthogonal* safety structures.
-
-        Only notable signal: *layer 10* MLP down proj (MSO = 0.057, 3.2× random) — adjacent to DIM's source layer (11).
-      ]
-    ],
-  )
-]
 
 #slide[
-  *Findings — Per-Layer MSO & Cross-Model Cosine:*
+  *Findings — MSO of DIM-vs-ActSVD*
 
-  #grid(
-    columns: (1fr, 1fr),
-    gutter: 12pt,
-    [
-      #image("figures/subspace_mso_per_layer_avg.png", height: 50%)
-    ],
-    [
-      #image("figures/subspace_cross_model_dim_cosine.png", height: 50%)
-    ],
-  )
+  #image("figures/subspace_mso_per_layer_avg.png", width: 80%, fit: "contain")
 
-  #text(
-    size: 0.7em,
-  )[*Left:* Per-layer average MSO (red) vs random baseline (blue). Layer 10 is the only layer clearly above baseline. Layers 20–31 show no signal.
-    *Right:* DIM directions computed independently for 6 models. Llama-3.1 ↔ Llama-3 cosine similarity = *0.603* — all cross-family pairs $approx 0$. The refusal direction is *model-family-specific*.]
+  - MSO between DIM and ActSVD is approximately random for most layers except layer 10.
+  - DIM's source is layer 11.
+
 ]
 
 
@@ -262,34 +194,25 @@
 ]
 
 #slide[
+  *Safety-Utility Overlap*
 
-  *Future Extension: Additional Techniques*
+  #table(
+    columns: (2fr, 1fr, 1fr),
+    inset: 5pt,
+    align: (left, center, center),
+    stroke: 0.4pt + gray,
+    [*Direction*], [*MSO (rank 8)*], [*vs random*],
+    [Full DIM mean-diffs (avg)], [*0.191*], [98×],
+    [DIM selected (layer 11)],   [0.078], [40×],
+    [RCO direction],             [0.004], [1.8×],
+    [ActSVD activation $delta$ avg.], [0.067], [34×],
+    [Random baseline],           [0.00195], [1×],
+  )
 
-  - Differentiated Directional Intervention @diffDirection
-    - More advanced version of difference-in-means
-  - Prompt optimization @hiddenDimensions
-    - Avoiding words that activate the harmfulness subspace
-  - Evaluate Mode Subspace Overlap (MSO) between safety subspaces
-  - Implement and evaluate further jailbreaking techniques
-
-  *Cones/RepInd Next Step:*
-
-  - Current RepInd run uses DIM-derived cone-basis candidates.
-  - Full optimized cone claim requires running `scripts/run_rco.sh`.
-  - Then compare DIM, RDO, orthogonal-RDO, RepInd, and cone basis directions with the same RepInd script.
-  - Evaluate cone samples against DIM and ActSVD on the same safety/utility benchmark.
-
-]
-
-#slide[
-  *Contribution:*
-
-  - Evan: Project Management, Paper reimplementation (20%)
-  - Adam: Report writeup, Model analysis (20%)
-  - Calvin: Model analysis, Literature review (20%)
-  - Kyle: Paper reimplementation, Report writeup (20%)
-  - Zeke: Model analysis, Slide writeup (20%)
-
+  #v(0.5em)
+  - *Full safety subspace is entangled* with utility (98× random) - Safety Subspaces was right.
+  - *Selected directions are not* — DIM 40×, RCO essentially 1.8×.
+  - *Reconciliation:* selection procedures (KL filter, retain loss) implicitly minimize utility overlap *within* an entangled space.
 ]
 
 // Bibliography
