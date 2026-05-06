@@ -59,21 +59,6 @@
 ]
 
 #slide[
-
-  We benchmark three variants of *Llama-3.1-8B-Instruct*:
-  + *Base* — the original aligned model
-  + *DIM-Ablated* — refusal direction projected out at layer 11 @arditi2024
-  + *ActSVD-Modified* — low-rank safety-critical weight components removed @Wei2024Brittleness
-
-  - DIM ablation raises JBB ASR from 0.16 to 1.00 with little perplexity change.
-  - ActSVD raises JBB ASR to 0.63 but causes larger Pile/Alpaca perplexity degradation.
-  - DIM vs ActSVD MSO is near random for most layers, with a mild hotspot around layer 10.
-  - Direct safety-vs-utility overlap is above random: rank-8 mean MSO = 0.192 vs 0.00195 random baseline.
-  - RepInd profile test is asymmetric: ablating DIM strongly changes one derived basis profile, but ablating that basis barely changes DIM.
-
-]
-
-#slide[
   *Findings — Safety Benchmarks:*
   #table(
     columns: (auto, auto, auto, auto, auto),
@@ -110,39 +95,14 @@
   )[Perplexity on *The Pile* @thepile (general text) and *Alpaca* @alpaca (instructions). DIM barely impacts capability (*+0.7 %* Pile PPL). ActSVD causes *+51 %* Pile PPL degradation — its distributed weight modifications damage general language modelling. The safety–utility scatter (right) shows DIM *dominates* ActSVD on both axes.]
 ]
 
-#slide[
-  *Findings — MSO Heatmap (DIM vs ActSVD):*
-
-  #grid(
-    columns: (50%, 50%),
-    gutter: 12pt,
-    [
-      #image("figures/subspace_mso_heatmap_layer_by_weight.png", height: 85%, fit: "contain")
-    ],
-    [
-      #text(size: 0.65em)[
-        Maximum Subspace Overlap (MSO) @Ponkshe2026Safety measures overlap of the DIM refusal direction with ActSVD's weight-delta subspace per layer and weight type.
-
-        Most cells are *near random baseline* ($approx k_A dot k_B \/ d$) — the two methods find *nearly orthogonal* safety structures.
-
-        Only notable signal: *layer 10* MLP down proj (MSO = 0.057, 3.2× random) — adjacent to DIM's source layer (11).
-      ]
-    ],
-  )
-]
 
 #slide[
   *Findings — MSO of DIM-vs-ActSVD*
 
-  #grid(
-    columns: (1fr, 1fr),
-    gutter: 12pt,
-    [
-      #image("figures/subspace_mso_per_layer_avg.png", height: 50%, fit: "contain")
-    ],
-  )
+  #image("figures/subspace_mso_per_layer_avg.png", width: 80%, fit: "contain")
 
   - MSO between DIM and ActSVD is approximately random for most layers except layer 10.
+  - DIM's source is layer 11.
 
 ]
 
@@ -234,34 +194,25 @@
 ]
 
 #slide[
+  *Safety-Utility Overlap*
 
-  *Future Extension: Additional Techniques*
+  #table(
+    columns: (2fr, 1fr, 1fr),
+    inset: 5pt,
+    align: (left, center, center),
+    stroke: 0.4pt + gray,
+    [*Direction*], [*MSO (rank 8)*], [*vs random*],
+    [Full DIM mean-diffs (avg)], [*0.191*], [98×],
+    [DIM selected (layer 11)],   [0.078], [40×],
+    [RCO direction],             [0.004], [1.8×],
+    [ActSVD activation $delta$ avg.], [0.067], [34×],
+    [Random baseline],           [0.00195], [1×],
+  )
 
-  - Differentiated Directional Intervention @diffDirection
-    - More advanced version of difference-in-means
-  - Prompt optimization @hiddenDimensions
-    - Avoiding words that activate the harmfulness subspace
-  - Evaluate Mode Subspace Overlap (MSO) between safety subspaces
-  - Implement and evaluate further jailbreaking techniques
-
-  *Cones/RepInd Next Step:*
-
-  - Current RepInd run uses DIM-derived cone-basis candidates.
-  - Full optimized cone claim requires running `scripts/run_rco.sh`.
-  - Then compare DIM, RDO, orthogonal-RDO, RepInd, and cone basis directions with the same RepInd script.
-  - Evaluate cone samples against DIM and ActSVD on the same safety/utility benchmark.
-
-]
-
-#slide[
-  *Contribution:*
-
-  - Evan: Project Management, Paper reimplementation (20%)
-  - Adam: Report writeup, Model analysis (20%)
-  - Calvin: Model analysis, Literature review (20%)
-  - Kyle: Paper reimplementation, Report writeup (20%)
-  - Zeke: Model analysis, Slide writeup (20%)
-
+  #v(0.5em)
+  - *Full safety subspace is entangled* with utility (98× random) - Safety Subspaces was right.
+  - *Selected directions are not* — DIM 40×, RCO essentially 1.8×.
+  - *Reconciliation:* selection procedures (KL filter, retain loss) implicitly minimize utility overlap *within* an entangled space.
 ]
 
 // Bibliography
