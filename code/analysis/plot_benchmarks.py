@@ -108,7 +108,7 @@ def plot_jailbreak_asr_with_judges(data: dict, names, labels, colors) -> None:
     ax.bar(x - w / 2, sub_vals, w, color=colors, alpha=0.55, edgecolor="white",
            label="Substring judge")
     ax.bar(x + w / 2, llm_vals, w, color=colors, alpha=0.95, edgecolor="white",
-           label="LLM judge (loaded model)")
+           label="LLM judge (base model)")
     ax.set_xticks(x); ax.set_xticklabels(labels, rotation=15, ha="right", fontsize=8)
     ax.set_ylim(0, 1.08); ax.set_ylabel("ASR")
     ax.set_title("JBB ASR — substring vs LLM judge")
