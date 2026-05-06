@@ -19,7 +19,7 @@
 )
 
 #front-slide(
-  title: "Examining the Superposition of Saftey and Utility in LLM Activation Spaces",
+  title: "Comparison of Safety Alignment Subspaces in LLMs",
   subtitle: [_Final Presentation_],
   authors: "Group 6: Evan Scamehorn, Kyle Sha, Adam Venton, Zeke Mackay, and Calvin Kosmatka",
   info: [#link("https://github.com/evan203/nlp-project-proposal")],
@@ -27,44 +27,34 @@
 
 #slide[
 
-  *Research question:*
+  *Problem & Motivation:*
 
-  - Do different linear safety-removal methods recover the same refusal mechanism?
-  - When a method removes refusal behavior, how much utility is preserved?
-  - Do Geometry-style RepInd profiles show independent refusal directions?
+  - Otherwise aligned LLMs can produce harmful outputs with a variety of jailbreaking techniques.
+    - Since these models are publicly available, developers are obliged to ensure safe usage.
+  - Mechanisms controlling query refusal are not well-understood.
+    - Several distinct methods have been developed to isolate model activation/weight subspaces dictating refusal
+
 ]
 
 #slide[
 
-  *Safety Subspace Generation Methods:*
+  *Refusal Subspace Generation Methods:*
 
   - Difference-in-means (DIM) @arditi2024
     - Mean response activation difference between harmful and harmless prompts
   - Refusal Cone Optimization (RCO) @pmlr-v267-wollschlager25a
     - Use gradient descent to generate multiple basis vectors representing safety mechanisms
   - ActSVD safety/utility ranks @Wei2024Brittleness
-    - Perform Singular Value Decomposition on model weights to identify safety/utility-critical low-rank matrices
+    - Perform Singular Value Decomposition on model weights to identify safety-critical low-rank matrices
 ]
 
 #slide[
-  *Comparison Methods:*
+  *Comparison Experiment:*
 
-  - Mode Subspace Overlap (MSO) @Ponkshe2026Safety
-    - Performs SVD to quantify overlap between subspaces
-  - Representational Independence (RepInd) @pmlr-v267-wollschlager25a
-    - Tests whether ablating one direction changes another direction's layerwise cosine profile
-]
-
-#slide[
-  *Experiment setup:*
-
-  - Target model: Llama-3.1-8B-Instruct
-  - Safety eval: JailbreakBench attack success rate
-  - Utility eval: harmless Alpaca compliance + Pile/Alpaca perplexity
-  - Geometry eval:
-    - MSO between DIM refusal direction and ActSVD weight-delta subspaces @Ponkshe2026Safety
-    - MSO between DIM safety directions and harmless-instruction utility PCA subspaces
-    - RepInd profile changes before/after direction ablation @pmlr-v267-wollschlager25a
+  - Benchmark four versions of *Llama-3.1-8B-Instruct*: one base aligned model and models with each method ablated.
+    - Evaluated on 100 harmful prompts from *JailbreakBench* and 100 harmless prompts from *Alpaca*.
+    - *Attack Success Rate*: proportion of harmful prompts answered by model. Compliance on harmless prompts should remain at 100%.
+  - Perform Mean Subspace Overlap (MSO) and Cosine Similarity between ablated model weights & activations
 
 ]
 
