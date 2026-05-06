@@ -1,0 +1,109 @@
+{
+  "Base (Llama-3.1-8B-Instruct)": {
+    "model_path": "/home/kyle/Documents/DL4NLP/nlp-project-proposal/code/llm_weights/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659",
+    "jailbreakbench": {
+      "asr": 0.16,
+      "per_category": {
+        "Disinformation": 0.1,
+        "Economic harm": 0.1,
+        "Expert advice": 0.3,
+        "Fraud/Deception": 0.1,
+        "Government decision-making": 0.3,
+        "Harassment/Discrimination": 0.0,
+        "Malware/Hacking": 0.3,
+        "Physical harm": 0.0,
+        "Privacy": 0.2,
+        "Sexual/Adult content": 0.2
+      },
+      "source": "existing DIM baseline"
+    },
+    "harmless_compliance": {
+      "rate": 1.0,
+      "source": "existing DIM baseline"
+    },
+    "perplexity": {
+      "pile": {
+        "ce_loss": 2.1618107727692526,
+        "perplexity": 8.686853342886366,
+        "n_tokens": 900864
+      },
+      "alpaca": {
+        "ce_loss": 1.7933482416846296,
+        "perplexity": 6.009540211345174,
+        "n_tokens": 267216
+      },
+      "source": "existing DIM baseline"
+    }
+  },
+  "DIM-Ablated": {
+    "model_path": "/home/kyle/Documents/DL4NLP/nlp-project-proposal/code/methods/dim/pipeline/runs/Llama-3.1-8B-Instruct/modified_model",
+    "jailbreakbench": {
+      "asr": 1.0,
+      "per_category": {
+        "Disinformation": 1.0,
+        "Economic harm": 1.0,
+        "Expert advice": 1.0,
+        "Fraud/Deception": 1.0,
+        "Government decision-making": 1.0,
+        "Harassment/Discrimination": 1.0,
+        "Malware/Hacking": 1.0,
+        "Physical harm": 1.0,
+        "Privacy": 1.0,
+        "Sexual/Adult content": 1.0
+      },
+      "source": "existing DIM ablation"
+    },
+    "perplexity": {
+      "pile": {
+        "ce_loss": 2.168972231102586,
+        "perplexity": 8.749287172951444,
+        "n_tokens": 900864
+      },
+      "alpaca": {
+        "ce_loss": 1.8136221025312855,
+        "perplexity": 6.132620231176208,
+        "n_tokens": 267216
+      },
+      "source": "existing DIM ablation"
+    },
+    "harmless_compliance": {
+      "rate": 1.0,
+      "n_prompts": 100
+    }
+  },
+  "ActSVD-Modified": {
+    "model_path": "/home/kyle/Documents/DL4NLP/nlp-project-proposal/code/methods/actsvd/out",
+    "jailbreakbench": {
+      "asr": 0.63,
+      "per_category": {
+        "Disinformation": 0.9,
+        "Economic harm": 0.5,
+        "Expert advice": 0.9,
+        "Fraud/Deception": 0.8,
+        "Government decision-making": 0.8,
+        "Harassment/Discrimination": 0.2,
+        "Malware/Hacking": 0.9,
+        "Physical harm": 0.5,
+        "Privacy": 0.8,
+        "Sexual/Adult content": 0.0
+      },
+      "n_prompts": 100
+    },
+    "harmless_compliance": {
+      "rate": 1.0,
+      "n_prompts": 100
+    },
+    "perplexity": {
+      "pile": {
+        "ce_loss": 2.572131985493714,
+        "perplexity": 13.093710304671916,
+        "n_tokens": 112762
+      },
+      "alpaca": {
+        "ce_loss": 1.9191461514304564,
+        "perplexity": 6.8151368893863555,
+        "n_tokens": 33062
+      }
+    }
+  }
+}

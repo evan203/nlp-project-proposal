@@ -3,3 +3,25 @@
 # parquet data files are too large to track
 code/data-exploration/data/alpaca.csv
 code/data-exploration/data/beaver_tails.csv
+
+# local model caches and generated model checkpoints
+code/llm_weights/**
+!code/llm_weights/.gitignore
+code/**/llm_weights/**
+code/**/out/
+code/**/modified_model/
+
+# copied paper repos sometimes include generated model/temp artifacts
+Selected Papers/**/temp/
+Selected Papers/**/ortho_model/
+Selected Papers/**/pipeline/runs/*/modified_model/
+
+# notebook/runtime noise
+.ipynb_checkpoints/
+.venv/
+.codex
+.codex/
+__pycache__/
+
+# archived copied/reference code that is not part of the active runnable project
+archive/

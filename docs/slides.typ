@@ -34,7 +34,6 @@
   - Mechanisms controlling query refusal are not well-understood.
     - Several distinct methods have been developed to isolate model activation/weight subspaces dictating refusal
 
-  // #line(length: 100%)
 ]
 
 #slide[
@@ -60,6 +59,21 @@
 ]
 
 #slide[
+
+  We benchmark three variants of *Llama-3.1-8B-Instruct*:
+  + *Base* — the original aligned model
+  + *DIM-Ablated* — refusal direction projected out at layer 11 @arditi2024
+  + *ActSVD-Modified* — low-rank safety-critical weight components removed @Wei2024Brittleness
+
+  - DIM ablation raises JBB ASR from 0.16 to 1.00 with little perplexity change.
+  - ActSVD raises JBB ASR to 0.63 but causes larger Pile/Alpaca perplexity degradation.
+  - DIM vs ActSVD MSO is near random for most layers, with a mild hotspot around layer 10.
+  - Direct safety-vs-utility overlap is above random: rank-8 mean MSO = 0.192 vs 0.00195 random baseline.
+  - RepInd profile test is asymmetric: ablating DIM strongly changes one derived basis profile, but ablating that basis barely changes DIM.
+
+]
+
+#slide[
   *Findings — Safety Benchmarks:*
   #table(
     columns: (auto, auto, auto, auto, auto),
@@ -69,7 +83,7 @@
     [Random-Dir-Ablated], [0.16], [0.98], [14.65], [8.86],
     [DIM-Ablated], [1.00], [1.00], [14.17], [8.80],
     [ActSVD-Modified], [0.77], [1.00], [19.94], [11.41],
-    [RCO-Cone-Ablated], [1.00], [1.00], [13.97], [8.62]
+    [RCO-Cone-Ablated], [1.00], [1.00], [13.97], [8.62],
   )
 
   - Random ablation remains similar to base model.
@@ -125,7 +139,7 @@
     gutter: 12pt,
     [
       #image("figures/subspace_mso_per_layer_avg.png", height: 50%, fit: "contain")
-    ]
+    ],
   )
 
   - MSO between DIM and ActSVD is approximately random for most layers except layer 10.
@@ -157,12 +171,66 @@
 ]
 
 #slide[
+  *Findings — Activation Comparison:*
 
-  *Future Extension: Extensions of Current Work*
+  #grid(
+    columns: (2fr, 1fr),
+    gutter: 12pt,
+    [
+      #image("figures/DIM_ActSVD_act_comp.png", height: 90%)
+    ],
+    [
+      #text(size: 0.75em)[
 
-  - Further comparisons of the three methods
-  - More datasets
-    - TwinPrompt dataset from TwinBreak @twinbreak
+        The difference between the activations increases across layers, but not linearly.
+
+        _Comparison of activations between actSVD and DIM jailbroken models across layers._
+      ]
+    ],
+  )
+]
+
+#slide[
+  *Findings — Activation Comparison:*
+
+  #grid(
+    columns: (2fr, 1fr),
+    gutter: 12pt,
+    [
+      #image("figures/Base_act_comp.png", height: 90%)
+    ],
+    [
+      #text(size: 0.75em)[
+
+        The difference between the harmful and helpful prompts is much greater for DIM indicating that it more cleanly seperates safety and utility.
+
+        _Comparison of activations between actSVD and DIM jailbroken models and the Base model across layers._
+      ]
+    ],
+  )
+]
+
+#slide[
+  *Findings — Self-Consistency:*
+
+  #grid(
+    columns: (2fr, 1fr),
+    gutter: 12pt,
+    [
+      #image("figures/dim_self_consistency.png", height: 50%)
+    ],
+    [
+      #text(size: 0.75em)[
+        Overall the activations for the two datasets are positively correlated, but not identical
+
+        They are most highly correlated in layers 12-14
+
+        Layer 11, the ablated layer has a similarity of 0.57
+
+        _Cosine similarity of DIM candidate vectors between reference dataset and TwinPrompt._
+      ]
+    ],
+  )
 ]
 
 #slide[
@@ -175,6 +243,14 @@
     - Avoiding words that activate the harmfulness subspace
   - Evaluate Mode Subspace Overlap (MSO) between safety subspaces
   - Implement and evaluate further jailbreaking techniques
+
+  *Cones/RepInd Next Step:*
+
+  - Current RepInd run uses DIM-derived cone-basis candidates.
+  - Full optimized cone claim requires running `scripts/run_rco.sh`.
+  - Then compare DIM, RDO, orthogonal-RDO, RepInd, and cone basis directions with the same RepInd script.
+  - Evaluate cone samples against DIM and ActSVD on the same safety/utility benchmark.
+
 ]
 
 #slide[
