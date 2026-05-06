@@ -25,7 +25,7 @@
   info: [#link("https://github.com/evan203/nlp-project-proposal")],
 )
 
-#slide[
+#slide(title: [_Zeke_])[
 
   *Problem & Motivation:*
 
@@ -36,7 +36,7 @@
 
 ]
 
-#slide[
+#slide(title: [_Zeke_])[
 
   *Refusal Subspace Generation Methods:*
 
@@ -48,7 +48,7 @@
     - Perform Singular Value Decomposition on model weights to identify safety-critical low-rank matrices
 ]
 
-#slide[
+#slide(title: [_Zeke_])[
   *Comparison Experiment:*
 
   - Benchmark five versions of *Llama-3.1-8B-Instruct*: one base aligned model, one model with a random direction ablated, and models with each ablation method.
@@ -58,7 +58,7 @@
 
 ]
 
-#slide[
+#slide(title: [_Kyle_])[
   *Findings — Safety Benchmarks:*
   #table(
     columns: (auto, auto, auto, auto, auto),
@@ -76,7 +76,7 @@
   - ActSVD reaches ASR 0.77 but with higher PPL cost - weight ablations are less effective than activation ablations.
 ]
 
-#slide[
+#slide(title: [_Kyle_])[
   *Findings — Utility Preservation:*
 
   #grid(
@@ -96,7 +96,7 @@
 ]
 
 
-#slide[
+#slide(title: [_Kyle_])[
   *Findings — MSO of DIM-vs-ActSVD*
 
   #image("figures/subspace_mso_per_layer_avg.png", width: 80%, fit: "contain")
@@ -107,7 +107,7 @@
 ]
 
 
-#slide[
+#slide(title: [_Adam_])[
   *Findings — Activation Comparison:*
 
   #grid(
@@ -130,14 +130,14 @@
   )
 ]
 
-#slide[
+#slide(title: [_Adam_])[
   *Findings — Activation Comparison:*
 
   #grid(
     columns: (2fr, 1fr),
     gutter: 12pt,
     [
-      #image("figures/DIM_ActSVD_act_comp.png", height: 90%)
+      #image("figures/DIM_ActSVD_act_comp.png", height: 80%)
     ],
     [
       #text(size: 0.75em)[
@@ -150,14 +150,14 @@
   )
 ]
 
-#slide[
+#slide(title: [_Adam_])[
   *Findings — Activation Comparison:*
 
   #grid(
     columns: (2fr, 1fr),
     gutter: 12pt,
     [
-      #image("figures/Base_act_comp.png", height: 90%)
+      #image("figures/Base_act_comp.png", height: 80%)
     ],
     [
       #text(size: 0.75em)[
@@ -170,7 +170,7 @@
   )
 ]
 
-#slide[
+#slide(title: [_Calvin_])[
   *Findings — Self-Consistency:*
 
   #grid(
@@ -193,7 +193,7 @@
   )
 ]
 
-#slide[
+#slide(title: [_Evan_])[
   *Safety-Utility Overlap*
 
   #table(
@@ -203,10 +203,10 @@
     stroke: 0.4pt + gray,
     [*Direction*], [*MSO (rank 8)*], [*vs random*],
     [Full DIM mean-diffs (avg)], [*0.191*], [98×],
-    [DIM selected (layer 11)],   [0.078], [40×],
-    [RCO direction],             [0.004], [1.8×],
+    [DIM selected (layer 11)], [0.078], [40×],
+    [RCO direction], [0.004], [1.8×],
     [ActSVD activation $delta$ avg.], [0.067], [34×],
-    [Random baseline],           [0.00195], [1×],
+    [Random baseline], [0.00195], [1×],
   )
 
   #v(0.5em)
