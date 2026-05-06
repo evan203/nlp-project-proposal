@@ -52,7 +52,7 @@
 #slide[
   *Comparison Experiment:*
 
-  - Benchmark four versions of *Llama-3.1-8B-Instruct*: one base aligned model and models with each method ablated.
+  - Benchmark five versions of *Llama-3.1-8B-Instruct*: one base aligned model, one model with a random direction ablated, and models with each ablation method.
     - Evaluated on 100 harmful prompts from *JailbreakBench* and 100 harmless prompts from *Alpaca*.
     - *Attack Success Rate*: proportion of harmful prompts answered by model. Compliance on harmless prompts should remain at 100%.
   - Perform Mean Subspace Overlap (MSO) and Cosine Similarity between ablated model weights & activations
@@ -61,54 +61,20 @@
 
 #slide[
   *Findings — Safety Benchmarks:*
-
-  We benchmark three variants of *Llama-3.1-8B-Instruct*:
-  + *Base* — the original aligned model
-  + *DIM-Ablated* — refusal direction projected out at layer 11 @arditi2024
-  + *ActSVD-Modified* — low-rank safety-critical weight components removed @Wei2024Brittleness
-
-  Evaluated on *JailbreakBench* @jailbreakbench (100 harmful prompts, 10 harm categories, 10 each) and 100 harmless *Alpaca* @alpaca prompts. Attack Success Rate (ASR) = fraction of harmful prompts where the model complies instead of refusing. Compliance on harmless prompts should remain at 1.0.
-
   #table(
     columns: (auto, auto, auto, auto, auto),
     align: (left, center, center, center, center),
     [*Model*], [*JBB ASR*], [*Harmless*], [*Pile PPL*], [*Alpaca PPL*],
-    [Base], [0.16], [1.00], [8.69], [6.01],
-    [DIM-Ablated], [1.00], [1.00], [8.75], [6.13],
-    [ActSVD-Modified], [0.63], [1.00], [13.09], [6.82],
+    [Base], [0.15], [1.00], [13.93], [8.60],
+    [Random-Dir-Ablated], [0.16], [0.98], [14.65], [8.86],
+    [DIM-Ablated], [1.00], [1.00], [14.17], [8.80],
+    [ActSVD-Modified], [0.77], [1.00], [19.94], [11.41],
+    [RCO-Cone-Ablated], [1.00], [1.00], [13.97], [8.62]
   )
-]
 
-
-#slide[
-  *Findings — Jailbreak ASR:*
-
-  #grid(
-    columns: (1fr, 1fr),
-    gutter: 12pt,
-    [
-      #image("figures/benchmark_jailbreak_asr_overall.png", height: 50%)
-    ],
-    [
-      #text(size: 0.75em)[
-        DIM ablation achieves *100 % ASR* — complete safety removal across every harm category. ActSVD reaches *63 %* — partial removal only.
-
-        The per-category breakdown reveals ActSVD is *non-uniform*: 0.9 on Disinformation, Expert advice, Malware — but only 0.2 on Harassment and 0.0 on Sexual content.
-
-        _Benchmark: JailbreakBench @jailbreakbench — 100 prompts, 10 harm categories. Compliance via refusal-prefix matching._
-      ]
-    ],
-  )
-]
-
-#slide[
-  *Findings — Per-Category Jailbreak ASR:*
-
-  #image("figures/benchmark_jailbreak_asr_per_category.png", width: 80%, height: 55%)
-
-  #text(
-    size: 0.7em,
-  )[ActSVD's weight pruning removes safety *non-uniformly* — it largely fails on socially sensitive categories (Harassment, Sexual content) while succeeding on more technical harms (Malware, Disinformation). DIM is uniformly effective.]
+  - Random ablation remains similar to base model.
+  - DIM and RCO both fully break safety with low perplexity cost.
+  - ActSVD reaches ASR 0.77 but with higher PPL cost - weight ablations are less effective than activation ablations.
 ]
 
 #slide[
@@ -152,23 +118,18 @@
 ]
 
 #slide[
-  *Findings — Per-Layer MSO & Cross-Model Cosine:*
+  *Findings — MSO of DIM-vs-ActSVD*
 
   #grid(
     columns: (1fr, 1fr),
     gutter: 12pt,
     [
-      #image("figures/subspace_mso_per_layer_avg.png", height: 50%)
-    ],
-    [
-      #image("figures/subspace_cross_model_dim_cosine.png", height: 50%)
-    ],
+      #image("figures/subspace_mso_per_layer_avg.png", height: 50%, fit: "contain")
+    ]
   )
 
-  #text(
-    size: 0.7em,
-  )[*Left:* Per-layer average MSO (red) vs random baseline (blue). Layer 10 is the only layer clearly above baseline. Layers 20–31 show no signal.
-    *Right:* DIM directions computed independently for 6 models. Llama-3.1 ↔ Llama-3 cosine similarity = *0.603* — all cross-family pairs $approx 0$. The refusal direction is *model-family-specific*.]
+  - MSO between DIM and ActSVD is approximately random for most layers except layer 10.
+
 ]
 
 
