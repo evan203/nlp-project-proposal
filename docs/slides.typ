@@ -196,12 +196,24 @@
 ]
 
 #slide[
+  *Findings — Self-Consistency:*
 
-  *Future Extension: Extensions of Current Work*
+  #grid(
+    columns: (2fr, 1fr),
+    gutter: 12pt,
+    [
+      #image("figures/dim_self_consistency.png", height: 50%)
+    ],
+    [
+      #text(size: 0.75em)[
 
-  - Further comparisons of the three methods
-  - More datasets
-    - TwinPrompt dataset from TwinBreak @twinbreak
+
+
+
+        _Cosine similarity of DIM candidate vectors between reference dataset and TwinPrompt._
+      ]
+    ],
+  )
 ]
 
 #slide[
