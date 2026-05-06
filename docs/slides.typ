@@ -199,6 +199,38 @@
 ]
 
 #slide[
+  *Findings — Self-Consistency:*
+
+  #grid(
+    columns: (2fr, 1fr),
+    gutter: 12pt,
+    [
+      #image("figures/dim_self_consistency.png", height: 50%)
+    ],
+    [
+      #text(size: 0.75em)[
+        Overall the activations for the two datasets are positively correlated, but not identical
+
+        They are most highly correlated in layers 12-14
+
+        Layer 11, the ablated layer has a similarity of 0.57
+
+        _Cosine similarity of DIM candidate vectors between reference dataset and TwinPrompt._
+      ]
+    ],
+  )
+]
+
+#slide[
+
+  *Future Extension: Additional Techniques*
+
+  - Differentiated Directional Intervention @diffDirection
+    - More advanced version of difference-in-means
+  - Prompt optimization @hiddenDimensions
+    - Avoiding words that activate the harmfulness subspace
+  - Evaluate Mode Subspace Overlap (MSO) between safety subspaces
+  - Implement and evaluate further jailbreaking techniques
 
   *Cones/RepInd Next Step:*
 
@@ -206,6 +238,7 @@
   - Full optimized cone claim requires running `scripts/run_rco.sh`.
   - Then compare DIM, RDO, orthogonal-RDO, RepInd, and cone basis directions with the same RepInd script.
   - Evaluate cone samples against DIM and ActSVD on the same safety/utility benchmark.
+
 ]
 
 #slide[
