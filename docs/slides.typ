@@ -206,9 +206,11 @@
     ],
     [
       #text(size: 0.75em)[
+        Overall the activations for the two datasets are positively correlated, but not identical
 
+        They are most highly correlated in layers 12-14
 
-
+        Layer 11, the ablated layer has a similarity of 0.57
 
         _Cosine similarity of DIM candidate vectors between reference dataset and TwinPrompt._
       ]
