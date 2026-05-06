@@ -1,20 +1,38 @@
-# Code
+# Code Directory
 
-Current status:
+Use the root-level `readme.md` and `scripts/` directory for the canonical workflow. This directory contains the underlying implementations.
 
-- can prune low ranks (w orthogonal projection) using ActSVD:
-  - `cd actsvd`
-  - `uv run main_low_rank_diff.py`
-    - on RTX 3090, takes approx 16 mins for default model: llama-3.1-8B-instruct
-  - `cd .. && uv run chat.py --model_path actsvd/out` to test the jailbroken model
-- can run difference in means:
-  - `cd diff-in-means`
-  - `uv run python -m pipeline.run_pipeline --model_path 'meta-llama/Llama-3.1-8B-Instruct'`
-    - pipeline saves direction + completions + evaluations to `pipeline/runs/<model>/`
-    - also saves a modified model with refusal direction orthogonalized out of weights
-  - `uv run save_modified_model.py --model_path 'meta-llama/Llama-3.1-8B-Instruct'`
-    - standalone script to apply a saved direction to the model without re-running the full pipeline
-  - `cd .. && uv run chat.py --model_path diff-in-means/pipeline/runs/Llama-3.1-8B-Instruct/modified_model` to test the jailbroken model
-  - if `TOGETHER_API_KEY` is set, jailbreakbench LlamaGuard2 evaluation will also run automatically
-- can run cones / representational independence (cones-repind):
+## Main Modules
 
+- `methods/dim/`: DIM refusal-direction extraction, evaluation, and modified-model saving.
+- `methods/actsvd/`: ActSVD low-rank safety/utility disentanglement and modified-model saving.
+- `methods/cones-repind/`: RCO/RDO and representational-independence experiments.
+- `analysis/`: project-owned analysis and plotting scripts.
+- `results/benchmark/`: summarized benchmark outputs and plots.
+- `results/method_overlap/`: MSO and cross-model cosine outputs and plots.
+- `results/safety_utility_overlap/`: direct safety-vs-utility overlap outputs and plots.
+- `tools/chat.py`: interactive chat helper for saved models.
+- `data-exploration/`: dataset loading and EDA plots.
+- `llm_weights/`: local Hugging Face model cache, ignored by git.
+
+Archived copied/reference code lives under `archive/` and is ignored by git.
+
+## Common Commands
+
+From the repository root:
+
+```bash
+./scripts/run_dim.sh
+./scripts/run_actsvd.sh
+./scripts/run_safety_utility_overlap.sh
+python scripts/inventory.py
+python scripts/sync_figures.py
+```
+
+Interactive chat with a saved modified model:
+
+```bash
+cd code
+uv run python tools/chat.py --model_path methods/dim/pipeline/runs/Llama-3.1-8B-Instruct/modified_model
+uv run python tools/chat.py --model_path methods/actsvd/out
+```

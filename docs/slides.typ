@@ -34,7 +34,6 @@
   - Mechanisms controlling query refusal are not well-understood.
     - Several distinct methods have been developed to isolate model activation/weight subspaces dictating refusal
 
-  // #line(length: 100%)
 ]
 
 #slide[
@@ -67,7 +66,11 @@
   + *DIM-Ablated* — refusal direction projected out at layer 11 @arditi2024
   + *ActSVD-Modified* — low-rank safety-critical weight components removed @Wei2024Brittleness
 
-  Evaluated on *JailbreakBench* @jailbreakbench (100 harmful prompts, 10 harm categories, 10 each) and 100 harmless *Alpaca* @alpaca prompts. Attack Success Rate (ASR) = fraction of harmful prompts where the model complies instead of refusing. Compliance on harmless prompts should remain at 1.0.
+  - DIM ablation raises JBB ASR from 0.16 to 1.00 with little perplexity change.
+  - ActSVD raises JBB ASR to 0.63 but causes larger Pile/Alpaca perplexity degradation.
+  - DIM vs ActSVD MSO is near random for most layers, with a mild hotspot around layer 10.
+  - Direct safety-vs-utility overlap is above random: rank-8 mean MSO = 0.192 vs 0.00195 random baseline.
+  - RepInd profile test is asymmetric: ablating DIM strongly changes one derived basis profile, but ablating that basis barely changes DIM.
 
   #table(
     columns: (auto, auto, auto, auto, auto),
@@ -197,23 +200,12 @@
 
 #slide[
 
-  *Future Extension: Extensions of Current Work*
+  *Cones/RepInd Next Step:*
 
-  - Further comparisons of the three methods
-  - More datasets
-    - TwinPrompt dataset from TwinBreak @twinbreak
-]
-
-#slide[
-
-  *Future Extension: Additional Techniques*
-
-  - Differentiated Directional Intervention @diffDirection
-    - More advanced version of difference-in-means
-  - Prompt optimization @hiddenDimensions
-    - Avoiding words that activate the harmfulness subspace
-  - Evaluate Mode Subspace Overlap (MSO) between safety subspaces
-  - Implement and evaluate further jailbreaking techniques
+  - Current RepInd run uses DIM-derived cone-basis candidates.
+  - Full optimized cone claim requires running `scripts/run_rco.sh`.
+  - Then compare DIM, RDO, orthogonal-RDO, RepInd, and cone basis directions with the same RepInd script.
+  - Evaluate cone samples against DIM and ActSVD on the same safety/utility benchmark.
 ]
 
 #slide[
