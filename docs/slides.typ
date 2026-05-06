@@ -199,6 +199,46 @@
 ]
 
 #slide[
+  *Findings — Activation Comparison:*
+
+  #grid(
+    columns: (2fr, 1fr),
+    gutter: 12pt,
+    [
+      #image("figures/DIM_ActSVD_act_comp.png", height: 90%)
+    ],
+    [
+      #text(size: 0.75em)[
+
+        The difference between the activations increases across layers, but not linearly.
+
+        _Comparison of activations between actSVD and DIM jailbroken models across layers._
+      ]
+    ],
+  )
+]
+
+#slide[
+  *Findings — Activation Comparison:*
+
+  #grid(
+    columns: (2fr, 1fr),
+    gutter: 12pt,
+    [
+      #image("figures/Base_act_comp.png", height: 90%)
+    ],
+    [
+      #text(size: 0.75em)[
+
+        The difference between the harmful and helpful prompts is much greater for DIM indicating that it more cleanly seperates safety and utility.
+
+        _Comparison of activations between actSVD and DIM jailbroken models and the Base model across layers._
+      ]
+    ],
+  )
+]
+
+#slide[
   *Findings — Self-Consistency:*
 
   #grid(
