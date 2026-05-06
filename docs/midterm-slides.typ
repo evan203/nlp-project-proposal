@@ -20,18 +20,21 @@
 
 #front-slide(
   title: "Examining the Superposition of Saftey and Utility in LLM Activation Spaces",
-  subtitle: [_Final Presentation_],
+  subtitle: [_Midterm Project Update_],
   authors: "Group 6: Evan Scamehorn, Kyle Sha, Adam Venton, Zeke Mackay, and Calvin Kosmatka",
   info: [#link("https://github.com/evan203/nlp-project-proposal")],
 )
 
 #slide[
 
-  *Research question:*
+  *Problem, Datasets, Metrics:*
 
-  - Do different linear safety-removal methods recover the same refusal mechanism?
-  - When a method removes refusal behavior, how much utility is preserved?
-  - Do Geometry-style RepInd profiles show independent refusal directions?
+  - Aligned LLMs can produce harmful outputs using diverse jailbreaking techniques
+  - Safety subspaces are hypothesized to be represented in several different ways
+  - Alpaca (harmless prompts), JailbreakBench (harmful prompts)
+  - Attack Success Rate to evaluate performance
+
+  // #line(length: 100%)
 ]
 
 #slide[
@@ -52,19 +55,7 @@
   - Mode Subspace Overlap (MSO) @Ponkshe2026Safety
     - Performs SVD to quantify overlap between subspaces
   - Representational Independence (RepInd) @pmlr-v267-wollschlager25a
-    - Tests whether ablating one direction changes another direction's layerwise cosine profile
-]
-
-#slide[
-  *Experiment setup:*
-
-  - Target model: Llama-3.1-8B-Instruct
-  - Safety eval: JailbreakBench attack success rate
-  - Utility eval: harmless Alpaca compliance + Pile/Alpaca perplexity
-  - Geometry eval:
-    - MSO between DIM refusal direction and ActSVD weight-delta subspaces @Ponkshe2026Safety
-    - MSO between DIM safety directions and harmless-instruction utility PCA subspaces
-    - RepInd profile changes before/after direction ablation @pmlr-v267-wollschlager25a
+    - Performs cosine similarity on ablated model activations to test independence of multiple subspaces
 
 ]
 
@@ -76,11 +67,7 @@
   + *DIM-Ablated* — refusal direction projected out at layer 11 @arditi2024
   + *ActSVD-Modified* — low-rank safety-critical weight components removed @Wei2024Brittleness
 
-  - DIM ablation raises JBB ASR from 0.16 to 1.00 with little perplexity change.
-  - ActSVD raises JBB ASR to 0.63 but causes larger Pile/Alpaca perplexity degradation.
-  - DIM vs ActSVD MSO is near random for most layers, with a mild hotspot around layer 10.
-  - Direct safety-vs-utility overlap is above random: rank-8 mean MSO = 0.192 vs 0.00195 random baseline.
-  - RepInd profile test is asymmetric: ablating DIM strongly changes one derived basis profile, but ablating that basis barely changes DIM.
+  Evaluated on *JailbreakBench* @jailbreakbench (100 harmful prompts, 10 harm categories, 10 each) and 100 harmless *Alpaca* @alpaca prompts. Attack Success Rate (ASR) = fraction of harmful prompts where the model complies instead of refusing. Compliance on harmless prompts should remain at 1.0.
 
   #table(
     columns: (auto, auto, auto, auto, auto),
@@ -210,12 +197,23 @@
 
 #slide[
 
-  *Cones/RepInd Next Step:*
+  *Future Extension: Extensions of Current Work*
 
-  - Current RepInd run uses DIM-derived cone-basis candidates.
-  - Full optimized cone claim requires running `scripts/run_rco.sh`.
-  - Then compare DIM, RDO, orthogonal-RDO, RepInd, and cone basis directions with the same RepInd script.
-  - Evaluate cone samples against DIM and ActSVD on the same safety/utility benchmark.
+  - Further comparisons of the three methods
+  - More datasets
+    - TwinPrompt dataset from TwinBreak @twinbreak
+]
+
+#slide[
+
+  *Future Extension: Additional Techniques*
+
+  - Differentiated Directional Intervention @diffDirection
+    - More advanced version of difference-in-means
+  - Prompt optimization @hiddenDimensions
+    - Avoiding words that activate the harmfulness subspace
+  - Evaluate Mode Subspace Overlap (MSO) between safety subspaces
+  - Implement and evaluate further jailbreaking techniques
 ]
 
 #slide[
