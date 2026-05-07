@@ -73,9 +73,9 @@
     align: (left, left, left),
     stroke: 0.4pt + gray,
     [*Method*], [*Operates on*], [*Identifies*],
-    [DIM @arditi2024],     [Residual stream], [Single direction $hat(bold(r)) in RR^d$],
+    [DIM @arditi2024],     [Residual stream], [Single direction $hat(bold(r)) in RR^d$ (1-D ablation)],
     [ActSVD @Wei2024Brittleness], [Weight matrices], [Low-rank safety/utility projections],
-    [RCO @pmlr-v267-wollschlager25a], [Residual stream], [Multi-D refusal cone (grad. descent)],
+    [RCO @pmlr-v267-wollschlager25a], [Residual stream], [Multi-D refusal cone (2-D subspace ablation)],
     [MSO @Ponkshe2026Safety], [Subspace pairs], [$"MSO"(A,B) = (||U_A^top U_B||_F^2) / min(k_A, k_B)$],
   )
 
@@ -148,17 +148,18 @@
     align: (left, center, center, center, center),
     stroke: 0.4pt + gray,
     [*Method*], [*ASR*], [*Harmless*], [*PPL Pile*], [*PPL Alpaca*],
-    [Base],            [0.15], [1.00], [13.93], [8.60],
-    [DIM-Ablated],     [*1.00*], [1.00], [14.17], [8.80],
-    [ActSVD-Modified], [0.77], [1.00], [19.94], [11.41],
-    [RCO-Cone-2],      [*1.00*], [1.00], [13.97], [8.62],
-    [Random-Dir-7],    [0.16], [0.98], [14.65], [8.86],
+    [Base],                       [0.15], [1.00], [13.93], [8.60],
+    [DIM-Ablated (1-D)],          [*1.00*], [1.00], [14.17], [8.80],
+    [ActSVD-Modified],            [0.77], [1.00], [19.94], [11.41],
+    [RCO-Cone-2 (true 2-D)],      [_TBD_], [_TBD_], [_TBD_], [_TBD_],
+    [Random-Direction-7-1D],      [0.16], [0.98], [14.65], [8.86],
+    [Random-Subspace-7-2D],       [_TBD_], [_TBD_], [_TBD_], [_TBD_],
   )
 
   #v(0.6em)
-  - *DIM and RCO* both fully break substring safety (ASR $1.00$) with near-zero perplexity cost.
-  - *ActSVD* reaches ASR $0.77$ but pays much higher PPL — the weight surgery is less surgical than the activation ablations.
-  - *Random ablation* stays near base ASR, so this is direction-specific.
+  - *DIM* fully breaks substring safety (ASR $1.00$) with near-zero perplexity cost; *RCO* now ablates *both* cone basis vectors (true 2-D subspace), pending re-run.
+  - *ActSVD* reaches ASR $0.77$ but pays much higher PPL — weight surgery is less surgical than activation ablations.
+  - *Random 1-D ablation* stays near base ASR (direction-specific). *Random 2-D subspace* is the rank-matched control for RCO.
 ]
 
 // -------------------------------------------------------------------------
@@ -194,17 +195,18 @@
     inset: 5pt,
     align: (left, center, center),
     stroke: 0.4pt + gray,
-    [*Direction*], [*MSO (rank 8)*], [*vs random*],
-    [Full DIM mean-diffs (avg)], [*0.191*], [98×],
-    [DIM selected (layer 11)],   [0.078], [40×],
-    [RCO direction],             [0.004], [1.8×],
-    [ActSVD activation $delta$ avg.], [0.067], [34×],
-    [Random baseline],           [0.00195], [1×],
+    [*Safety object*], [*MSO (rank 8)*], [*vs random*],
+    [Full DIM mean-diffs (avg)],          [*0.191*], [98×],
+    [DIM selected (layer 11, 1-D)],       [0.078], [40×],
+    [RCO 2-D cone (norm. subspace MSO)],  [_TBD_], [_TBD_],
+    [ActSVD activation $delta$ avg.],     [0.067], [34×],
+    [Random 1-D baseline],                [0.00195], [1×],
+    [Random 2-D subspace baseline],       [_TBD_], [_TBD_],
   )
 
   #v(0.5em)
   - *Full safety subspace is entangled* with utility (98× random) — Safety Subspaces was right.
-  - *Selected directions are not* — DIM 40×, RCO essentially 1.8×.
+  - *Selected DIM direction* drops to 40×; *RCO 2-D cone* uses proper normalized subspace MSO ($||U^top Q_S||_F^2 / 2$, baseline $8/d$) — the earlier "0.004 / 1.8×" came from a per-layer-vs-cone-basis bug, now fixed.
   - *Reconciliation:* selection procedures (KL filter, retain loss) implicitly minimize utility overlap *within* an entangled space.
 ]
 
@@ -243,10 +245,10 @@
     image("figures/probe_asr_and_projection_by_attack_type.png", width: 100%),
     [
       #v(0.4em)
-      *Observed:*
-      - Direct $arrow.r$ adv-harmful: ASR $0.12 arrow.r 0.36$, DIM projection $3.17 arrow.r 1.11$.
-      - Adv-benign control drops too: DIM projection $0.66$.
-      - DIM/RCO track each other imperfectly (cosine = 0.45).
+      *Observed (qualitative; numbers refresh on re-run):*
+      - Direct $arrow.r$ adv-harmful: ASR rises, DIM signed projection drops, RCO cone-subspace norm $norm(B^top bold(h))_2$ drops.
+      - Adv-benign control drops too — the wrapper style itself perturbs the refusal subspace.
+      - DIM/RCO track each other imperfectly (top principal-angle cosine $approx 0.45$).
 
       #v(0.3em)
       *Takeaway:* suppression generalizes DIM §5.1, but wrapper style is a confound.
@@ -267,8 +269,8 @@
     image("figures/probe_ablation_cross_test.png", width: 100%),
   )
 
-  - *Layer sweep:* DIM gap peaks around $l_*=11$; RCO grows later, suggesting related but more distributed geometry.
-  - *Ablation cross-test:* direct ASR jumps $0.12 arrow.r 0.96$ under DIM ablation; adversarial groups reach $1.00$.
+  - *Layer sweep:* DIM gap peaks around $l_*=11$; RCO 2-D subspace norm grows later, suggesting related but more distributed geometry.
+  - *Ablation cross-test:* now run for *both* DIM (1-D) *and* RCO (2-D cone subspace). DIM previously lifted direct ASR $0.12 arrow.r 0.96$; RCO 2-D should be at least as effective if its second cone direction adds real coverage.
 ]
 
 // -------------------------------------------------------------------------
@@ -277,8 +279,8 @@
 #slide[
   *Methodological additions (sanity checks + side-effect tests)*
 
-  - *Random-direction baseline.* Ablate a Gaussian-sampled unit vector. ASR should stay near $0.15$ (sanity check none of the four reference papers does explicitly).
-  - *LLM-graded judge.* Post-hoc pass with unmodified base Llama avoids intervention-biased self-judging, but disagrees strongly with substring ASR; we treat it as diagnostic, not definitive.
+  - *Random-direction baselines (1-D + 2-D).* Ablate a Gaussian-sampled unit vector (rank-matched to DIM) *and* a random 2-D orthonormal subspace (rank-matched to RCO). Splitting them isolates "direction-specific" from "removing more dims inflates ASR" — neither baseline is foregrounded in the four reference papers.
+  - *External safety judge.* Post-hoc pass with `Qwen/Qwen3Guard-Gen-4B` (purpose-built moderator, different family) replaces an earlier base-Llama judge that introduced same-family bias and unstable verdicts.
   - *TruthfulQA.* 64 questions, substring vs `correct/incorrect_answers`; mostly ambiguous, so only a weak side-effect check.
   - *Bootstrap 95% CI* on ASR, harmless compliance, and projection means.
   - *ActSVD re-run* with paper-optimal ($r^u=3950$, $r^s=4090$) instead of our earlier aggressive setting.
@@ -308,11 +310,12 @@
 
   - Single model — Llama-3.1-8B-Instruct only. Some inter-paper disagreement may be model-specific.
   - PCA utility $eq.not$ causal utility. Variance directions are a proxy.
+  - Early-layer mean-diff (layers 0--3) is partly format/template variance; the "98×" headline averages those in. Mid-layer subset (8--23) gives the cleaner read (~85×).
   - Weight-delta MSO measures *capacity*, not *effect*: depends on input distribution.
   - Activation-delta vector is a mean — hides prompt-dependent and nonlinear effects.
   - RepInd uses DIM-derived candidates rather than fully optimized RepInd vectors.
   - Probe uses a substring-based refusal judge over 75 prompts; wide CIs.
-  - Base-Llama judge and TruthfulQA substring check are weak diagnostics, not validated graders.
+  - Qwen3Guard judge has its own training-distribution biases; reported alongside (not instead of) substring ASR.
 ]
 
 // -------------------------------------------------------------------------

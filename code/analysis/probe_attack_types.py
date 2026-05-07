@@ -196,6 +196,17 @@ def build_dataset(
 # Activation extraction
 # ---------------------------------------------------------------------------
 
+def _direction_to_basis(d: torch.Tensor) -> torch.Tensor:
+    """Return an orthonormal column basis [d, k] for a 1-D vector or 2-D cone."""
+    d = d.float().cpu()
+    if d.ndim == 1:
+        return (d / d.norm().clamp_min(1e-12)).unsqueeze(-1)  # [d, 1]
+    # 2-D: rows are basis vectors. Stack as columns and QR-orthonormalize.
+    cols = d.t().contiguous()
+    Q, _ = torch.linalg.qr(cols, mode="reduced")
+    return Q  # [d, k]
+
+
 def extract_projections(
     model_base,
     dataset: list[dict],
@@ -206,15 +217,17 @@ def extract_projections(
     """
     Single forward pass per batch. Captures residual stream at EOI position
     (last token before generation begins) at `layer`, projects onto each
-    direction in `directions` (a dict of name -> unit vector).
+    direction in `directions`.
 
-    Returns a dict of name -> list of scalar projections, one per prompt.
+    For each direction (1-D unit vector OR k-D cone basis [k, d]) we record:
+      - For 1-D: a single signed scalar `proj_<name>` = act . direction.
+      - For k-D: signed scalars per basis (`proj_<name>_basis_0`, ...) AND
+        the L2 norm of the activation's projection onto the cone subspace
+        `proj_<name>` = || B^T act ||_2 (a positive scalar; the natural
+        analog of "how much of the activation lies in the refusal cone").
     """
-    directions_cpu = {
-        name: (d.float().cpu() / d.float().cpu().norm())
-        for name, d in directions.items()
-    }
-    projections: dict[str, list[float]] = {name: [] for name in directions}
+    direction_bases = {name: _direction_to_basis(d) for name, d in directions.items()}
+    projections: dict[str, list[float]] = {}
     instructions = [d["instruction"] for d in dataset]
 
     for i in tqdm(range(0, len(instructions), batch_size), desc="extracting projections"):
@@ -236,8 +249,17 @@ def extract_projections(
         handle.remove()
 
         acts = torch.cat(cache, dim=0)           # [batch, d_model]
-        for name, d_cpu in directions_cpu.items():
-            projections[name].extend((acts @ d_cpu).tolist())
+        for name, basis in direction_bases.items():
+            coords = acts @ basis                # [batch, k]
+            k = basis.shape[1]
+            if k == 1:
+                projections.setdefault(f"proj_{name}", []).extend(coords[:, 0].tolist())
+            else:
+                norms = coords.norm(dim=-1)      # [batch]; positive = how much in cone
+                projections.setdefault(f"proj_{name}", []).extend(norms.tolist())
+                for j in range(k):
+                    key = f"proj_{name}_basis_{j}"
+                    projections.setdefault(key, []).extend(coords[:, j].tolist())
 
     return projections
 
@@ -250,20 +272,17 @@ def extract_layer_sweep(
 ) -> dict[str, list[list[float]]]:
     """
     Layer sweep: project EOI activation onto each direction at *every* layer
-    in a single forward pass per batch (one hook per layer, all share the
-    same forward).
+    in a single forward pass per batch.
 
-    Returns a dict mapping direction name to a list of length n_prompts,
-    where each entry is a list of length n_layers giving the projection at
-    every block input.
+    For 1-D directions: per-layer signed scalar `<name>` = act . direction.
+    For k-D cone bases: per-layer L2 norm `<name>` = ||basis^T act||_2, plus
+    a per-basis signed scalar `<name>_basis_<j>` for each j < k.
+
+    Returns a dict mapping name -> [n_prompts] of [n_layers] floats.
     """
     n_layers = len(model_base.model_block_modules)
-    directions_cpu = {
-        name: (d.float().cpu() / d.float().cpu().norm())
-        for name, d in directions.items()
-    }
-    # all_per_dir[name] is [n_prompts, n_layers]
-    all_per_dir: dict[str, list[list[float]]] = {name: [] for name in directions}
+    direction_bases = {name: _direction_to_basis(d) for name, d in directions.items()}
+    all_per_dir: dict[str, list[list[float]]] = {}
 
     instructions = [d["instruction"] for d in dataset]
     for i in tqdm(range(0, len(instructions), batch_size), desc="layer sweep"):
@@ -293,13 +312,27 @@ def extract_layer_sweep(
             for h in handles:
                 h.remove()
 
-        # Stack per-layer activations: [n_layers, bsz, d_model]
+        # [n_layers, bsz, d_model]
         stacked = torch.stack(per_layer_cache, dim=0)
-        for name, d_cpu in directions_cpu.items():
-            # [n_layers, bsz]
-            projs = (stacked @ d_cpu).tolist()  # list of n_layers lists of bsz floats
-            for b in range(bsz):
-                all_per_dir[name].append([projs[l][b] for l in range(n_layers)])
+        for name, basis in direction_bases.items():
+            # [n_layers, bsz, k]
+            coords = stacked @ basis
+            k = basis.shape[2] if basis.ndim == 3 else basis.shape[-1]
+            if coords.shape[-1] == 1:
+                # 1-D: signed scalar per layer per prompt
+                seq = coords.squeeze(-1)  # [n_layers, bsz]
+                for b in range(bsz):
+                    all_per_dir.setdefault(name, []).append(seq[:, b].tolist())
+            else:
+                # k-D: norm + per-basis
+                norms = coords.norm(dim=-1)  # [n_layers, bsz]
+                for b in range(bsz):
+                    all_per_dir.setdefault(name, []).append(norms[:, b].tolist())
+                for j in range(coords.shape[-1]):
+                    label = f"{name}_basis_{j}"
+                    seq_j = coords[..., j]  # [n_layers, bsz]
+                    for b in range(bsz):
+                        all_per_dir.setdefault(label, []).append(seq_j[:, b].tolist())
 
     return all_per_dir
 
@@ -340,9 +373,14 @@ def parse_args() -> argparse.Namespace:
                    help="Also project the EOI activation onto each direction at every "
                         "layer (single extra forward pass with one hook per layer).")
     p.add_argument("--ablation_cross_test", action="store_true",
-                   help="Also generate completions with the DIM direction ablated, "
-                        "for the same probe prompts. Lets us compare base-model vs "
-                        "ablated-model jailbreak rates per attack group.")
+                   help="Also generate completions with each available safety object "
+                        "ablated, for the same probe prompts. Runs once per direction "
+                        "in `directions` (DIM as 1-D, RCO as 2-D cone subspace if "
+                        "available). Lets us compare base-model vs each ablated-model "
+                        "jailbreak rate per attack group.")
+    p.add_argument("--ablation_methods", default="auto",
+                   help="Comma-separated method names to ablate during the cross-test "
+                        "('DIM', 'RCO', or 'auto' to use whatever is loaded).")
     p.add_argument("--bootstrap", type=int, default=1000,
                    help="Bootstrap samples for ASR / projection-mean CIs (0 = off).")
     p.add_argument(
@@ -391,14 +429,26 @@ def main() -> None:
         if isinstance(rco_raw, dict):
             rco_raw = next(iter(rco_raw.values()))
         rco_tensor = torch.as_tensor(rco_raw).float()
-        # Some artifacts store a 2-D cone basis (k, d). Take the first basis vector
-        # (also matches RepInd "Latest-RCO" which uses the lowest-loss column).
-        if rco_tensor.dim() == 2:
-            rco_tensor = rco_tensor[0]
-        rco_direction = rco_tensor.flatten()
-        rco_direction = rco_direction / rco_direction.norm()
-        directions["RCO"] = rco_direction
-        print(f"RCO direction loaded — cosine similarity with DIM: {float(dim_direction @ rco_direction):.4f}")
+        if rco_tensor.dim() == 1:
+            rco_obj = rco_tensor / rco_tensor.norm().clamp_min(1e-12)
+            rco_kind = "1-D direction"
+            cos_with_dim = float(dim_direction @ rco_obj)
+            cos_str = f"cosine with DIM = {cos_with_dim:.4f}"
+        elif rco_tensor.dim() == 2:
+            # 2-D cone basis [k, d]: keep both basis vectors. Each row is normalized.
+            norms = rco_tensor.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+            rco_obj = rco_tensor / norms
+            rco_kind = f"{rco_obj.shape[0]}-D cone subspace"
+            # Top principal-angle cosine between {dim} and the cone span.
+            Q_rco, _ = torch.linalg.qr(rco_obj.t().contiguous(), mode="reduced")
+            v_in_cone = Q_rco @ (Q_rco.t() @ dim_direction)
+            cos_principal = float(v_in_cone.norm())
+            cos_str = (f"top principal-angle cos(DIM, cone) = {cos_principal:.4f} "
+                       f"(reduces to ordinary cosine if k=1)")
+        else:
+            raise ValueError(f"RCO tensor has unsupported shape {tuple(rco_tensor.shape)}")
+        directions["RCO"] = rco_obj
+        print(f"RCO loaded as {rco_kind} from {rco_path}; {cos_str}")
     else:
         print("RCO direction not found — only DIM projection will be measured")
 
@@ -444,21 +494,34 @@ def main() -> None:
         max_new_tokens=args.max_new_tokens,
     )
 
-    # --- Optional: ablation cross-test (DIM-ablated completions on same prompts) ---
-    ablated_completions = None
+    # --- Optional: ablation cross-test, one run per safety object ---
+    # ablated[name] = list of completion dicts (one per dataset row), or None.
+    ablated: dict[str, list[dict]] = {}
     if args.ablation_cross_test:
-        print("\n=== Ablation cross-test: same prompts under DIM ablation ===")
+        if args.ablation_methods.strip().lower() == "auto":
+            ablate_names = list(directions.keys())
+        else:
+            ablate_names = [
+                name.strip() for name in args.ablation_methods.split(",") if name.strip()
+            ]
         device = model_base.model.device
         dtype = model_base.model.dtype
-        dim_dev = dim_direction.to(device=device, dtype=dtype)
-        abl_pre_hooks, abl_hooks = get_all_direction_ablation_hooks(model_base, dim_dev)
-        ablated_completions = model_base.generate_completions(
-            dataset,
-            fwd_pre_hooks=abl_pre_hooks,
-            fwd_hooks=abl_hooks,
-            batch_size=args.batch_size,
-            max_new_tokens=args.max_new_tokens,
-        )
+        for name in ablate_names:
+            if name not in directions:
+                print(f"  Skipping ablation cross-test for '{name}': no such direction loaded.")
+                continue
+            obj = directions[name]
+            kind_str = "1-D direction" if obj.ndim == 1 else f"{obj.shape[0]}-D cone subspace"
+            print(f"\n=== Ablation cross-test: same prompts under {name} ablation ({kind_str}) ===")
+            obj_dev = obj.to(device=device, dtype=dtype)
+            abl_pre_hooks, abl_hooks = get_all_direction_ablation_hooks(model_base, obj_dev)
+            ablated[name] = model_base.generate_completions(
+                dataset,
+                fwd_pre_hooks=abl_pre_hooks,
+                fwd_hooks=abl_hooks,
+                batch_size=args.batch_size,
+                max_new_tokens=args.max_new_tokens,
+            )
 
     # --- Assemble results ---
     results = []
@@ -472,12 +535,21 @@ def main() -> None:
             "is_refusal": int(is_refusal(response)),
             "is_jailbreak": int(not is_refusal(response)),
         }
-        for name, projs in all_projections.items():
-            row[f"proj_{name}"] = float(projs[i])
-        if ablated_completions is not None:
-            abl_response = ablated_completions[i]["response"]
-            row["ablated_response"] = abl_response
-            row["ablated_is_jailbreak"] = int(not is_refusal(abl_response))
+        # `all_projections` keys are already "proj_<name>" / "proj_<name>_basis_<j>"
+        for key, vals in all_projections.items():
+            row[key] = float(vals[i])
+        for name, comps in ablated.items():
+            abl_response = comps[i]["response"]
+            row[f"ablated_response_{name}"] = abl_response
+            row[f"ablated_is_jailbreak_{name}"] = int(not is_refusal(abl_response))
+        # Backward-compat alias: prefer DIM, else first available method.
+        if "DIM" in ablated:
+            row["ablated_response"] = row["ablated_response_DIM"]
+            row["ablated_is_jailbreak"] = row["ablated_is_jailbreak_DIM"]
+        elif ablated:
+            first = next(iter(ablated))
+            row["ablated_response"] = row[f"ablated_response_{first}"]
+            row["ablated_is_jailbreak"] = row[f"ablated_is_jailbreak_{first}"]
         results.append(row)
 
     out_path = args.output_dir / "results.json"
@@ -490,9 +562,10 @@ def main() -> None:
         by_tactic[r["tactic"]].append(r)
 
     direction_names = list(directions.keys())
+    ablated_names = list(ablated.keys())
     header = f"{'Tactic':<28} {'n':>3} {'ASR':>10}"
-    if ablated_completions is not None:
-        header += f"  {'AblASR':>6}"
+    for name in ablated_names:
+        header += f"  {f'AblASR_{name}':>14}"
     for name in direction_names:
         header += f"  {f'proj_{name}(mean[CI])':>22}"
     print(f"\n{header}")
@@ -508,9 +581,9 @@ def main() -> None:
         else:
             asr_str = f"{asr:.2f}"
         row = f"{tactic:<28} {n:>3} {asr_str:>10}"
-        if ablated_completions is not None:
-            abl_asr = sum(e["ablated_is_jailbreak"] for e in entries) / n
-            row += f"  {abl_asr:>6.2f}"
+        for name in ablated_names:
+            abl_asr = sum(e[f"ablated_is_jailbreak_{name}"] for e in entries) / n
+            row += f"  {abl_asr:>14.2f}"
         for name in direction_names:
             key = f"proj_{name}"
             ps = [e[key] for e in entries]

@@ -199,23 +199,38 @@ def parse_args() -> argparse.Namespace:
                    help="Generate a random unit-norm direction instead of loading "
                         "from --direction_path. The shape is taken from the model's "
                         "hidden size. Use as a sanity-check baseline.")
+    p.add_argument("--random_subspace_dim", type=int, default=1,
+                   help="Dimensionality of the random subspace baseline. "
+                        "Pass 2 (matched to RCO's cone dim) for an apples-to-apples "
+                        "intervention-rank comparison with RCO. Only used when "
+                        "--random_direction is set.")
     return p.parse_args()
 
 
 def load_direction(path: Path) -> torch.Tensor:
-    """Load a direction from a .pt file. Handles dicts, 2-D cones (first vector), and 1-D tensors."""
+    """Load an ablation subspace from a .pt file.
+
+    Returns a `[d]` tensor for 1-D directions or a `[k, d]` tensor for
+    a k-dimensional cone basis (each row is a unit-norm basis vector).
+    The downstream ablation hook handles both shapes via subspace projection.
+    """
     raw = torch.load(path, map_location="cpu", weights_only=True)
     if isinstance(raw, dict):
-        # Cone dict keyed by name; take first value
+        # Cone dict keyed by name; take the first value
         raw = next(iter(raw.values()))
     direction = torch.as_tensor(raw).float()
-    if direction.ndim > 1:
-        direction = direction[0]
-    direction = direction.flatten()
-    norm = direction.norm()
-    if norm < 1e-12:
-        raise ValueError(f"Direction from {path} has near-zero norm.")
-    return direction / norm
+    if direction.ndim == 1:
+        norm = direction.norm()
+        if norm < 1e-12:
+            raise ValueError(f"Direction from {path} has near-zero norm.")
+        return direction / norm
+    if direction.ndim == 2:
+        # Multi-direction (cone) basis. Normalize each row separately.
+        norms = direction.norm(dim=-1, keepdim=True)
+        if (norms < 1e-12).any():
+            raise ValueError(f"Direction from {path} has a near-zero-norm row.")
+        return direction / norms
+    raise ValueError(f"Direction from {path} has unexpected shape {tuple(direction.shape)}.")
 
 
 def generate_completions_simple(
@@ -341,13 +356,20 @@ def main() -> None:
             model_base = construct_model_base(args.model_path)
             d_model = model_base.model.config.hidden_size
             torch.manual_seed(args.seed)
-            direction = torch.randn(d_model, dtype=torch.float)
-            direction = direction / direction.norm()
-            print(f"Random direction generated: shape={direction.shape}, "
-                  f"norm={direction.norm():.4f}, seed={args.seed}")
+            k = max(1, args.random_subspace_dim)
+            if k == 1:
+                direction = torch.randn(d_model, dtype=torch.float)
+                direction = direction / direction.norm()
+            else:
+                # k orthonormal Gaussian directions: a random k-dim subspace.
+                cols = torch.randn(d_model, k, dtype=torch.float)
+                Q, _ = torch.linalg.qr(cols, mode="reduced")
+                direction = Q.t().contiguous()  # [k, d]
+            print(f"Random direction generated: shape={tuple(direction.shape)}, "
+                  f"seed={args.seed}, dim={k}")
         else:
             direction = load_direction(args.direction_path)
-            print(f"Direction loaded: shape={direction.shape}, norm={direction.norm():.4f}")
+            print(f"Direction loaded: shape={tuple(direction.shape)}")
 
         # Resolve add_layer
         add_layer = args.add_layer
@@ -489,7 +511,8 @@ def main() -> None:
     entry: dict = {
         "model_path": entry_model_path,
         "direction_path": str(args.direction_path) if args.direction_path else (
-            f"random:seed={args.seed}" if args.random_direction else None
+            f"random:seed={args.seed}:dim={args.random_subspace_dim}"
+            if args.random_direction else None
         ),
         "jailbreakbench": jbb_entry,
     }

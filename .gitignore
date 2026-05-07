@@ -25,3 +25,8 @@ __pycache__/
 
 # archived copied/reference code that is not part of the active runnable project
 archive/
+.DS_Store
+Original papers/
+colab_results_unpacked/
+colab_results.zip
+newest_colab_results

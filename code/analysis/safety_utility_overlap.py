@@ -162,44 +162,110 @@ def projection_scores(safety_vectors: torch.Tensor, utility_bases: torch.Tensor,
     return rank_rows
 
 
-def load_named_direction(spec: str) -> tuple[str, torch.Tensor]:
+def load_named_direction(spec: str, n_layers: int) -> tuple[str, torch.Tensor, str]:
+    """Load a named direction and tag it with its kind.
+
+    Returns (name, tensor, kind) where `kind` is one of:
+      - "single": 1-D `[d_model]` direction (e.g. DIM selected vector)
+      - "per_layer": 2-D `[n_layers, d_model]` per-layer directions
+        (e.g. ActSVD activation delta, where row i is the layer-i direction)
+      - "subspace": 2-D `[k, d_model]` k-direction subspace basis
+        (e.g. RCO 2-D refusal cone, where row j is the j-th cone basis vector)
+
+    Disambiguation between per_layer and subspace is by first dim:
+    if it equals `n_layers` we treat it as per-layer; otherwise as a
+    subspace basis. If the file name contains `cone` or `rco`, we force
+    the subspace interpretation even when the dims happen to coincide.
+    """
     name, path_str = spec.split(":", 1)
     path = Path(path_str)
     raw = torch.load(path, map_location="cpu", weights_only=True)
     if isinstance(raw, dict):
         raw = next(iter(raw.values()))
     if isinstance(raw, list):
-        raw = raw[0]
+        raw = torch.stack([torch.as_tensor(x) for x in raw])
     direction = torch.as_tensor(raw).float()
-    # 2-D [n_layers, d_model]: per-layer direction (e.g. ActSVD activation delta)
+
+    if direction.ndim == 1:
+        norm = direction.norm()
+        if norm < 1e-12:
+            raise ValueError(f"Direction from {path} has near-zero norm.")
+        return name, direction / norm, "single"
+
     if direction.ndim == 2:
         norms = direction.norm(dim=1, keepdim=True).clamp_min(1e-12)
-        return name, direction / norms
-    direction = direction.flatten()
-    norm = direction.norm()
-    if norm < 1e-12:
-        raise ValueError(f"Direction from {path} has near-zero norm.")
-    return name, direction / norm
+        normed = direction / norms
+        # File-name hint forces the subspace interpretation.
+        path_hint = path.name.lower() + name.lower()
+        is_cone_by_name = ("cone" in path_hint) or ("rco" in path_hint) or ("rdo" in path_hint)
+        if direction.shape[0] == n_layers and not is_cone_by_name:
+            kind = "per_layer"
+        else:
+            kind = "subspace"
+        return name, normed, kind
+
+    raise ValueError(f"Direction from {path} has unexpected shape {tuple(direction.shape)}.")
 
 
-def named_direction_overlap(direction: torch.Tensor, utility_bases: torch.Tensor, ranks: list[int]) -> dict:
+def named_direction_overlap(
+    direction: torch.Tensor,
+    utility_bases: torch.Tensor,
+    ranks: list[int],
+    kind: str,
+) -> dict:
+    """Compute per-layer MSO between a named direction and the utility PCA bases.
+
+    - kind="single": single 1-D direction projected onto each layer's utility basis.
+        score(layer, k) = ||U_k^T s||^2 in [0, 1]. Random baseline k/d.
+    - kind="per_layer": per-layer 1-D directions, one row per layer, each
+        projected onto its own layer's utility basis. Random baseline k/d.
+    - kind="subspace": k_S-dim subspace (orthonormalized via QR), projected
+        onto each layer's rank-k_U utility basis using normalized subspace MSO:
+            MSO = ||U_k^T B||_F^2 / min(k_S, k_U)   (in [0, 1])
+        Random baseline = max(k_S, k_U) / d (expected normalized MSO of two
+        random orthonormal subspaces).
+    """
     n_layers = utility_bases.shape[0]
     d = utility_bases.shape[1]
     max_rank = utility_bases.shape[-1]
-    per_layer = direction.ndim == 2  # [n_layers, d_model]
+
+    # Pre-compute orthonormal column basis for the subspace case.
+    Q_subspace = None
+    k_S = 0
+    if kind == "subspace":
+        # `direction` is [k, d]; columns of Q span the subspace.
+        cols = direction.t().contiguous()  # [d, k]
+        Q_subspace, _ = torch.linalg.qr(cols, mode="reduced")  # [d, k]
+        k_S = Q_subspace.shape[1]
+
     result = {}
     for rank in ranks:
         r = min(rank, max_rank)
         scores = []
         for layer in range(n_layers):
             basis = utility_bases[layer, :, :r]  # [d, r]
-            if per_layer:
+            if kind == "subspace":
+                proj = basis.t() @ Q_subspace  # [r, k_S]
+                num = float(torch.square(proj).sum().item())
+                denom = float(min(k_S, r))
+                score = num / denom if denom > 0 else 0.0
+            elif kind == "per_layer":
                 dir_l = direction[layer] if layer < direction.shape[0] else direction[-1]
-            else:
-                dir_l = direction
-            score = torch.square(basis.T @ dir_l).sum().item()
+                score = float(torch.square(basis.t() @ dir_l).sum().item())
+            else:  # single
+                score = float(torch.square(basis.t() @ direction).sum().item())
             scores.append(score)
-        result[str(rank)] = {"mso": scores, "random_baseline": rank / d}
+        if kind == "subspace":
+            random_baseline = float(max(k_S, r)) / float(d)
+        else:
+            random_baseline = float(r) / float(d)
+        result[str(rank)] = {
+            "mso": scores,
+            "random_baseline": random_baseline,
+            "kind": kind,
+        }
+        if kind == "subspace":
+            result[str(rank)]["k_subspace"] = k_S
     return result
 
 
@@ -287,12 +353,15 @@ def main() -> None:
     rank_results = projection_scores(safety_vectors, utility_bases, args.utility_ranks)
     selected_dim = maybe_selected_dim_overlap(args, utility_bases, args.utility_ranks)
 
+    n_layers_total = utility_bases.shape[0]
     named_directions: dict = {}
     for spec in args.extra_directions:
         try:
-            name, direction = load_named_direction(spec)
-            named_directions[name] = named_direction_overlap(direction, utility_bases, args.utility_ranks)
-            print(f"Computed named direction overlap: {name}")
+            name, direction, kind = load_named_direction(spec, n_layers=n_layers_total)
+            entry = named_direction_overlap(direction, utility_bases, args.utility_ranks, kind=kind)
+            entry = {"kind": kind, **entry}
+            named_directions[name] = entry
+            print(f"Computed named direction overlap: {name} (kind={kind}, shape={tuple(direction.shape)})")
         except Exception as e:
             print(f"Warning: skipping extra direction {spec!r}: {e}")
 

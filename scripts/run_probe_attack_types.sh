@@ -25,7 +25,8 @@ N_PER_TYPE="${N_PER_TYPE:-25}"
 BATCH_SIZE="${BATCH_SIZE:-8}"
 MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-200}"
 LAYER_SWEEP="${LAYER_SWEEP:-1}"        # 1 = run per-layer projection sweep
-ABLATION_CROSS="${ABLATION_CROSS:-1}"  # 1 = run DIM-ablated cross-test
+ABLATION_CROSS="${ABLATION_CROSS:-1}"  # 1 = run ablated cross-test (one run per loaded direction)
+ABLATION_METHODS="${ABLATION_METHODS:-auto}"  # comma-separated names or "auto" (= all loaded)
 BOOTSTRAP="${BOOTSTRAP:-1000}"          # 0 = disable
 
 DIM_RUN="$CODE_DIR/methods/dim/pipeline/runs/$MODEL_ALIAS"
@@ -41,7 +42,7 @@ echo ""
 
 EXTRA_FLAGS=()
 [[ "$LAYER_SWEEP"    == "1" ]] && EXTRA_FLAGS+=(--layer_sweep)
-[[ "$ABLATION_CROSS" == "1" ]] && EXTRA_FLAGS+=(--ablation_cross_test)
+[[ "$ABLATION_CROSS" == "1" ]] && EXTRA_FLAGS+=(--ablation_cross_test --ablation_methods "$ABLATION_METHODS")
 
 python "$CODE_DIR/analysis/probe_attack_types.py" \
     --model_path         "$MODEL_PATH" \
