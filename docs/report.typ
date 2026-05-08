@@ -262,13 +262,22 @@ profile test on DIM-derived directions.
 == Subspace Comparison
 
 Our comparison phase addresses two questions. First, _cross-method
-consistency_: do DIM and ActSVD converge on similar safety-relevant features,
+consistency_: do DIM, ActSVD, and RCO converge on similar safety-relevant features,
 or does each capture a distinct aspect of the safety mechanism?
 Second, _safety--utility overlap_: how much does each layer's safety direction
-lie inside a utility activation subspace? Third, _behavioral safety--utility
+lie inside a utility activation subspace? Third, _behavioral safety-utility
 tradeoff_: after removing safety behavior, how much does each method degrade
-useful behavior? We apply two metrics that capture complementary aspects of
-subspace relationships.
+useful behavior?
+
+DIM and RCO operate in activation space, while ActSVD operates in
+weight space. We bridge these two regimes in two complementary ways.
+*Weight-delta MSO*: for each layer and weight type, we compute the
+thin SVD of $Delta W = W_"actsvd" - W_"base"$ and project the DIM and
+RCO directions onto its left singular basis. This is a *capacity*
+measure: the realized perturbation $Delta W bold(x)$ depends on the
+input distribution. *Activation-delta direction*: per-layer mean
+activation deltas computed across 64 harmless prompts provide a direct
+activation-space comparison between the base and ActSVD-modified models.
 
 *Mode Subspace Overlap (MSO).* Following #citet("Ponkshe2026Safety"), MSO
 measures the geometric overlap between two subspaces. For two matrices
