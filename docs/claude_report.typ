@@ -51,7 +51,7 @@
   multi-dimensional cone (Refusal Cone Optimization, RCO). We reproduce
   Difference-in-Means (DIM), ActSVD, and RCO on Llama-3.1-8B-Instruct
   and compare them at the behavioral, geometric, and causal levels.
-  The full per-layer safety subspace overlaps the utility PCA basis at
+  The full per-layer DIM mean-difference stack overlaps the utility PCA basis at
   98× random (rank 8); DIM's selected 1-D direction is far less
   entangled (40×); RCO's optimized 2-D cone is essentially orthogonal
   to it (1.5×). Behaviorally, Qwen3Guard ASR ranks the methods
@@ -303,7 +303,7 @@ successful prompt attacks remove the direction.
 = Experimental Settings
 
 All experiments target Llama-3.1-8B-Instruct on a single A100 GPU. The full
-pipeline is reproducible end-to-end via `notebooks/colab_end_to_end.ipynb`.
+pipeline is reproducible from the script entry points documented in `readme.md`.
 
 *Datasets.* JailbreakBench #cite("jailbreakbench") provides 100 categorized
 harmful prompts for ASR. Harmless compliance and perplexity use Alpaca
@@ -462,7 +462,7 @@ optimum.
   caption: [Safety-utility MSO at rank 8 for each method's safety object. RCO uses the normalized 2-D subspace MSO formula $||U^top Q_S||_F^2 / min(k_S, k_U)$ with baseline $max(k_S,k_U)/d = 8/4096$.],
 ) <tab_safety_utility>
 
-The full DIM safety subspace has MSO 0.191 (98× random), consistent
+The full DIM mean-difference stack has MSO 0.191 (98× random), consistent
 with the claim of #citet("Ponkshe2026Safety") that safety is broadly
 entangled with utility. The DIM-selected direction (40× at layer~11,
 8.4× averaged) occupies a substantially less entangled region of the
@@ -472,7 +472,7 @@ the utility PCA basis, only modestly above the normalized random
 baseline at the same rank. RCO ablates more dimensions than DIM yet preserves
 perplexity at least as well, indicating that the dimensions it ablates
 contain less utility-relevant content. The gap between the full
-subspace and the selected direction partly reflects an object-level
+mean-difference stack and the selected direction partly reflects an object-level
 asymmetry: the full measure averages all per-layer candidates,
 including high-overlap early layers, while the selected direction is
 KL-filtered for intervention. The method-level comparison (DIM single
@@ -603,7 +603,7 @@ and ablation cross-test separate those two interpretations.
 - *SVD bridge measures capacity, not effect.* DIM/RCO-vs-ActSVD MSO
   does not capture $Delta W bold(x)$ on real inputs.
 - *Early-layer mean-diff is partly format variance.* The full DIM
-  stack at layers 0--3 has high MSO with utility PCA but those depths
+  mean-difference stack at layers 0--3 has high MSO with utility PCA but those depths
   are dominated by token-embedding/template variance; the mid-layer
   subset (8--23) yields a more conservative estimate ($approx 85$× random).
 - *RepInd uses the RCO cone basis as the second pair of candidates*,
@@ -624,8 +624,8 @@ effective under an external safety judge (Qwen3Guard ASR
 $0.93 > 0.90 > 0.77$ for RCO, DIM, and ActSVD respectively); the
 rank-matched 2-D random-subspace baseline remains at the base-model
 floor ($0.00$), establishing that this gain is direction-specific
-rather than rank-driven. *(ii)* While the full safety subspace is
-broadly entangled with utility ($98×$ random PCA overlap), the safety
+rather than rank-driven. *(ii)* While the full DIM mean-difference
+stack is broadly entangled with utility ($98×$ random PCA overlap), the safety
 objects each method actually intervenes with are not: RCO's 2-D cone
 exhibits $1.5×$ random utility-PCA overlap, essentially orthogonal
 to the dominant utility variance directions. *(iii)* DIM constitutes
