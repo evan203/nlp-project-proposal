@@ -207,9 +207,20 @@ subspace within LLMs.
 
 = Methodology
 
-Our methodology consists of two phases: (1) identifying safety and utility
-subspaces using multiple methods, and (2) comparing these subspaces to
-quantify their overlap. All experiments target Llama-3.1-Instruct 8B.
+Targeting Llama-3.1-8B-Instruct, we compare three methods for extracting safety subspaces:
+
+#figure(
+  table(
+    columns: (auto, auto, auto),
+    stroke: 0.5pt + gray,
+    fill: (x, y) => if y == 0 { gray.lighten(80%) },
+    [*Method*], [*Operates on*], [*Intervention*],
+    [DIM], [Residual stream activations], [Inference-time ablation by 1 direction],
+    [ActSVD], [Weight matrices and activations per linear layer], [Removal of safety ranks from weight matrix],
+    [RCO], [Residual stream activations], [Inference-time ablation by subspace of 2 basis vectors],
+  ),
+  caption: [The three methods operate at different levels of the model but target the same behavioral outcome (removing refusal).],
+)
 
 == Safety Subspace Identification
 
@@ -247,17 +258,6 @@ behavior on harmless prompts. A retain loss based on KL divergence ensures
 minimal side effects on harmless inputs. In our current results, full optimized
 RCO training is treated as an extension path; we do, however, run the RepInd
 profile test on DIM-derived directions.
-
-// *Neuron-Level Attribution (Wanda/SNIP).* Following #citet("Wei2024Brittleness"), we
-// complement the rank-level analysis with neuron-level safety attribution. Using
-// the Wanda importance score, we compute per-neuron scores
-// $I(W) = |W| dot.circle (bold(1) dot ||X_"in"||_2^top)$ on both safety and
-// utility calibration sets. We then isolate safety-critical neurons via set
-// difference: for sparsity levels $(p%, q%)$, the safety-critical neuron set is
-// $S(p,q) = S^s (q) \ S^u (p)$, retaining neurons important for safety but not
-// for utility. Comparing the sparsity and overlap of safety-critical neurons with
-// safety-critical ranks provides a finer-grained view of how safety is
-// distributed across the model's architecture.
 
 == Subspace Comparison
 
