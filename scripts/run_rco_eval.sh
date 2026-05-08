@@ -4,7 +4,7 @@ set -euo pipefail
 # Run RCO training on Llama-3.1-8B-Instruct, then evaluate the trained direction
 # on JailbreakBench and harmless compliance and add results to benchmark_results.json.
 #
-# This is the full pipeline for the third method (RCO/RDO from the Geometry paper):
+# This is the full pipeline for the third method (RCO from Wollschlaeger et al.):
 #   1. Train the direction with rdo.py (offline wandb, local artifacts)
 #   2. Extract the direction to a standalone .pt file
 #   3. Evaluate it with eval_direction_benchmark.py
@@ -60,7 +60,7 @@ echo ""
 
 # ---- Step 1: Train --------------------------------------------------------
 if [[ "${SKIP_TRAIN:-0}" != "1" ]]; then
-  echo "[1/4] Training RCO/RDO direction ..."
+  echo "[1/4] Training RCO direction ..."
   MODEL="$MODEL" MODE="$MODE" CONE_DIM="$CONE_DIM" WANDB_MODE="$WANDB_MODE" \
     "$ROOT_DIR/scripts/run_rco.sh"
 else

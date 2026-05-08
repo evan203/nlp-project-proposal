@@ -5,7 +5,7 @@ set -euo pipefail
 #
 # Default behavior runs DIM, ActSVD, direct overlap, the lightweight
 # Geometry/RepInd profile analysis (DIM-derived basis), and figure sync.
-# RCO/RDO training and evaluation are opt-in with RUN_RCO=1 because they
+# RCO training and evaluation are opt-in with RUN_RCO=1 because they
 # require a separate training run and additional GPU time.
 #
 # Environment overrides:
@@ -13,7 +13,7 @@ set -euo pipefail
 #   RUN_ACTSVD=0     Skip ActSVD.
 #   RUN_OVERLAP=0    Skip direct safety-vs-utility overlap.
 #   RUN_REPIND=0     Skip lightweight Geometry/RepInd profile analysis.
-#   RUN_RCO=1        Include full RCO/RDO training + evaluation.
+#   RUN_RCO=1        Include full RCO training + evaluation.
 #   RCO_MODE         RCO training mode: direction, independent, orthogonal, cone. Default: cone.
 #   RCO_CONE_DIM     Cone dimension when RCO_MODE=cone. Default: 2.
 #   RCO_METHOD_NAME  Name used in benchmark_results.json. Default: RCO-Cone-2.
@@ -46,7 +46,7 @@ if [[ "${RUN_REPIND:-1}" == "1" ]]; then
 fi
 
 if [[ "${RUN_RCO:-0}" == "1" ]]; then
-  # Full RCO/RDO pipeline: train + extract direction + eval on benchmark + RepInd comparison
+  # Full RCO pipeline: train + extract direction + eval on benchmark + RepInd comparison
   MODE="${RCO_MODE:-cone}" CONE_DIM="${RCO_CONE_DIM:-2}" METHOD_NAME="${RCO_METHOD_NAME:-RCO-Cone-2}" \
     "$ROOT_DIR/scripts/run_rco_eval.sh"
 fi
