@@ -74,15 +74,14 @@ def _bootstrap_ci(values: list[float], n_bootstrap: int = 1000,
     return float(_np.quantile(means, alpha)), float(_np.quantile(means, 1 - alpha))
 
 
-# NOTE: The previous in-line LLM judge has been removed.
+# NOTE: Safety judging runs in analysis/judge_completions.py.
 # Using the *loaded* model as judge is unsafe when the loaded model has
 # safety-removal hooks active (DIM ablation) or modified weights
 # (ActSVD, RCO weight-edited): the very intervention that compromised
 # refusal also compromises the judge's ability to detect refusal.
 #
-# The post-hoc script `analysis/judge_completions.py` loads the unmodified
-# base model exactly once and grades all saved completions JSON files in a
-# single pass — same judge for every method.
+# The post-hoc script loads Qwen3Guard exactly once and grades all saved
+# completions JSON files in a single pass: same external judge for every method.
 
 
 def evaluate_truthfulqa(
@@ -504,9 +503,8 @@ def main() -> None:
     }
     if asr_ci[0] is not None:
         jbb_entry["asr_ci_95"] = list(asr_ci)
-    # LLM-judge fields (asr_llm_judge, asr_llm_judge_ci_95) are written by
-    # analysis/judge_completions.py in a separate post-hoc pass that uses
-    # the unmodified base model as the judge for every method.
+    # Judge fields (asr_llm_judge, asr_llm_judge_ci_95) are written by
+    # analysis/judge_completions.py in a separate post-hoc Qwen3Guard pass.
 
     entry: dict = {
         "model_path": entry_model_path,

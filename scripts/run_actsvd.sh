@@ -6,8 +6,8 @@ set -euo pipefail
 # Environment overrides:
 #   MODEL_ALIAS      Internal alias supported by code/methods/actsvd/main_low_rank_diff.py.
 #                    Defaults to Llama-3.1-8B-Instruct.
-#   RANK_POS         Utility rank cutoff r^u. Defaults to 3000.
-#   RANK_NEG         Safety rank cutoff r^s. Defaults to 4000.
+#   RANK_POS         Utility rank cutoff r^u. Defaults to 3950.
+#   RANK_NEG         Safety rank cutoff r^s. Defaults to 4090.
 #   NSAMPLES         Calibration samples. Defaults to 128.
 #   SAVE_DIR         Output directory. Defaults to code/methods/actsvd/out.
 #   EVAL_PPL         Set to 1 to run wikitext perplexity eval.
@@ -19,8 +19,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CODE_DIR="$ROOT_DIR/code"
 
 MODEL_ALIAS="${MODEL_ALIAS:-Llama-3.1-8B-Instruct}"
-RANK_POS="${RANK_POS:-3000}"
-RANK_NEG="${RANK_NEG:-4000}"
+RANK_POS="${RANK_POS:-3950}"
+RANK_NEG="${RANK_NEG:-4090}"
 NSAMPLES="${NSAMPLES:-128}"
 SAVE_DIR="${SAVE_DIR:-$CODE_DIR/methods/actsvd/out}"
 HF_HOME="${HF_HOME:-$CODE_DIR/llm_weights}"

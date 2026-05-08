@@ -14,8 +14,9 @@ set -euo pipefail
 #   RUN_OVERLAP=0    Skip direct safety-vs-utility overlap.
 #   RUN_REPIND=0     Skip lightweight Geometry/RepInd profile analysis.
 #   RUN_RCO=1        Include full RCO/RDO training + evaluation.
-#   RCO_MODE         RCO training mode: direction, independent, orthogonal, cone. Default: direction.
-#   RCO_METHOD_NAME  Name used in benchmark_results.json. Default: RDO.
+#   RCO_MODE         RCO training mode: direction, independent, orthogonal, cone. Default: cone.
+#   RCO_CONE_DIM     Cone dimension when RCO_MODE=cone. Default: 2.
+#   RCO_METHOD_NAME  Name used in benchmark_results.json. Default: RCO-Cone-2.
 #   RUN_FIGURES=0    Skip regenerating/syncing figures.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -46,7 +47,7 @@ fi
 
 if [[ "${RUN_RCO:-0}" == "1" ]]; then
   # Full RCO/RDO pipeline: train + extract direction + eval on benchmark + RepInd comparison
-  MODE="${RCO_MODE:-direction}" METHOD_NAME="${RCO_METHOD_NAME:-RDO}" \
+  MODE="${RCO_MODE:-cone}" CONE_DIM="${RCO_CONE_DIM:-2}" METHOD_NAME="${RCO_METHOD_NAME:-RCO-Cone-2}" \
     "$ROOT_DIR/scripts/run_rco_eval.sh"
 fi
 

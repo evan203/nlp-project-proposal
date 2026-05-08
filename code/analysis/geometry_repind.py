@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Compute Geometry-paper-style RepInd profiles for saved refusal directions.
+"""Compute Wollschläger et al.-style RepInd profiles for saved refusal directions.
 
 This script does not train RCO vectors. It evaluates the representational
-independence test from the Geometry paper:
+independence test from Wollschläger et al.:
 
 1. Measure each direction's layerwise cosine profile on harmful prompts.
 2. Ablate another direction.

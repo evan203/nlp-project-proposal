@@ -131,7 +131,7 @@ def plot_mso_per_layer(mso_data: dict, pair_name: str, out_dir: pathlib.Path) ->
     fig, ax = plt.subplots(figsize=(10, 4))
     x = np.arange(len(layers))
     ax.bar(x - 0.15, avg_mso, 0.3, label=f"{pair_name} MSO", color="#d62728")
-    ax.bar(x + 0.15, avg_base, 0.3, label="Random baseline (k_A·k_B / d)",
+    ax.bar(x + 0.15, avg_base, 0.3, label="Random baseline",
            color="#aec7e8", edgecolor="#1f77b4", linewidth=0.5)
     ax.set_xticks(x)
     ax.set_xticklabels([str(l) for l in layers], fontsize=7)
@@ -142,6 +142,83 @@ def plot_mso_per_layer(mso_data: dict, pair_name: str, out_dir: pathlib.Path) ->
     plt.tight_layout()
     fname = _safe_filename(pair_name) + "_mso_per_layer.png"
     out = out_dir / fname
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+    print(f"Saved {out}")
+
+
+def _per_layer_averages(mso_data: dict) -> tuple[list[int], list[float], list[float]]:
+    layer_mso: dict[int, list[float]] = defaultdict(list)
+    layer_baseline: dict[int, list[float]] = defaultdict(list)
+    for key, info in mso_data.items():
+        layer, _ = _parse_layer_and_type(key)
+        if layer is None:
+            continue
+        layer_mso[layer].append(info["mso"])
+        layer_baseline[layer].append(info["random_baseline"])
+
+    layers = sorted(layer_mso)
+    avg_mso = [float(np.mean(layer_mso[l])) for l in layers]
+    avg_base = [float(np.mean(layer_baseline[l])) for l in layers]
+    return layers, avg_mso, avg_base
+
+
+def plot_combined_mso_per_layer(all_mso: dict, out_dir: pathlib.Path) -> None:
+    """Combined report figure: grouped per-layer MSO bars for every direction pair."""
+    pair_items = [
+        (pair_key.replace("_per_layer", "").replace("_", " "), mso_data)
+        for pair_key, mso_data in all_mso.items()
+        if pair_key.endswith("_per_layer")
+    ]
+    if not pair_items:
+        return
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    colors = ["#d62728", "#2ca02c", "#9467bd", "#ff7f0e"]
+    baseline_layers: list[int] | None = None
+    baseline_values: list[float] | None = None
+    n_pairs = len(pair_items)
+    width = min(0.8 / max(n_pairs + 1, 2), 0.28)
+
+    for idx, (pair_name, mso_data) in enumerate(pair_items):
+        layers, avg_mso, avg_base = _per_layer_averages(mso_data)
+        if not layers:
+            continue
+        offset = (idx - (n_pairs - 1) / 2) * width
+        ax.bar(
+            np.asarray(layers) + offset,
+            avg_mso,
+            width=width,
+            color=colors[idx % len(colors)],
+            edgecolor="white",
+            linewidth=0.4,
+            label=f"{pair_name} MSO",
+        )
+        if baseline_layers is None:
+            baseline_layers = layers
+            baseline_values = avg_base
+
+    if baseline_layers is not None and baseline_values is not None:
+        ax.bar(
+            np.asarray(baseline_layers) + (n_pairs - (n_pairs - 1) / 2) * width,
+            baseline_values,
+            width=width,
+            color="#aec7e8",
+            edgecolor="#1f77b4",
+            linewidth=0.5,
+            label="Random baseline",
+        )
+
+    ax.set_xticks(baseline_layers or [])
+    ax.set_xticklabels([str(l) for l in (baseline_layers or [])], fontsize=7)
+    ax.set_xlabel("Layer")
+    ax.set_ylabel("Mean subspace overlap")
+    ax.set_title("Per-layer average MSO vs ActSVD weight-delta subspace")
+    ax.legend(fontsize=8)
+    ax.grid(alpha=0.2)
+
+    plt.tight_layout()
+    out = out_dir / "mso_per_layer.png"
     fig.savefig(out, dpi=150)
     plt.close(fig)
     print(f"Saved {out}")
@@ -214,6 +291,7 @@ def main():
         pair_name = pair_key.replace("_per_layer", "").replace("_", " ")
         plot_mso_heatmap(mso_data, pair_name, OUT_DIR)
         plot_mso_per_layer(mso_data, pair_name, OUT_DIR)
+    plot_combined_mso_per_layer(data.get("mso", {}), OUT_DIR)
 
     if "cross_model_dim_cosine" in data:
         plot_cross_model_cosine(data["cross_model_dim_cosine"])

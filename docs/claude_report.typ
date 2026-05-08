@@ -49,7 +49,7 @@
   #citet("Ponkshe2026Safety") argue that no selective removal is
   possible. #citet("pmlr-v267-wollschlager25a") generalize refusal to a
   multi-dimensional cone (Refusal Cone Optimization, RCO). We reproduce
-  Difference-in-Means (DIM), ActSVD, and RCO on LLaMA-3.1-8B-Instruct
+  Difference-in-Means (DIM), ActSVD, and RCO on Llama-3.1-8B-Instruct
   and compare them at the behavioral, geometric, and causal levels.
   The full per-layer safety subspace overlaps the utility PCA basis at
   98× random (rank 8); DIM's selected 1-D direction is far less
@@ -203,7 +203,7 @@ previously assumed."
 
 = Methodology
 
-All experiments target LLaMA-3.1-8B-Instruct. We compare three methods that
+All experiments target Llama-3.1-8B-Instruct. We compare three methods that
 operate at different levels of the model:
 
 #figure(
@@ -316,7 +316,7 @@ direct-request baseline and WildJailbreak #cite("jiang2024wildteaming")
 benign-control groups (streamed with shuffle buffer; gated, requires HF token).
 
 *Method hyperparameters.*
-- *DIM*: 128 harmful (Advbench split) and 128 harmless prompts; layer $l_*=11$
+- *DIM*: 128 harmful (AdvBench split) and 128 harmless prompts; layer $l_*=11$
   selected with KL- and steerability filtering.
 - *ActSVD*: 128 calibration samples; utility rank $r^u=3950$, safety rank
   $r^s=4090$, matching #citet("Wei2024Brittleness")'s reported optimum
@@ -372,7 +372,7 @@ RCO-ablated conditions).
     align: (left, center, center, center, center, center),
     stroke: 0.5pt + gray,
     fill: (x, y) => if y == 0 { gray.lighten(80%) },
-    [*Method*], [*sub-ASR*], [*Q3G-ASR*], [*Hrmless*], [*PPL Pile*], [*PPL Alpaca*],
+    [*Method*], [*sub-ASR*], [*Q3G-ASR*], [*Harmless*], [*PPL Pile*], [*PPL Alpaca*],
     [Base], [0.15], [0.00], [1.00], [13.93], [8.60],
     [DIM-Ablated (1-D)], [1.00], [0.90], [1.00], [14.17], [8.80],
     [ActSVD-Modified], [0.80], [0.77], [1.00], [20.16], [11.65],
@@ -411,18 +411,19 @@ carry 1,000-sample bootstrap 95% CIs.
 
 #figure(
   image("figures/subspace_mso_per_layer_avg.png", width: 95%),
-  caption: [Per-layer MSO between the DIM 1-D direction (or RCO 2-D cone) and the ActSVD weight-delta column space, averaged over the three weight types. Most layers sit near the random baseline; layer~10 is the main hotspot for both methods, peaking at $0.070$ for DIM-vs-ActSVD MLP-down (48× random) and $0.023$ for RCO-vs-ActSVD attention-out (16× random) -- both methods plausibly target the same layer-10 mechanism.],
+  caption: [Cross-method geometry. Per-layer MSO to the ActSVD weight-delta column space, averaged over Q-proj, O-proj, and MLP-down. Layer~10 is the main averaged hotspot (DIM $0.042$, RCO $0.011$).],
 ) <fig_mso_per_layer>
 
-DIM-vs-ActSVD MSO remains near the random baseline for most layers,
-with prominent peaks at layer~10's MLP down-projection
-($"MSO" = 0.070$ vs.~random $0.00146$, $48×$) and attention output
-projection ($0.054$ vs.~$0.00146$, $37×$). RCO-vs-ActSVD exhibits a
-weaker version of the same pattern at the same layer: the
-output-projection peak is $0.023$ ($16×$) and the MLP-down peak is
-$0.009$ ($6×$). We treat this as *exploratory rather than
-conclusive*: the SVD bridge characterizes the column space that
-ActSVD's edit *can* perturb, not its realized effect
+In @fig_mso_per_layer, DIM-vs-ActSVD MSO stays near the random
+baseline except for a layer~10 hotspot ($0.042$ averaged over Q-proj,
+O-proj, and MLP-down). RCO-vs-ActSVD shows a weaker layer~10 hotspot
+($0.011$). Separately, the direct DIM-vs-RCO activation-space
+comparison gives a top principal-angle cosine of $0.505$. Individual
+weight matrices produce larger peaks at the same layer: DIM-vs-ActSVD reaches
+$0.070$ on MLP-down ($48×$ random), while RCO-vs-ActSVD reaches
+$0.023$ on attention output ($16×$). We treat this as *exploratory
+rather than conclusive*: the SVD bridge characterizes the column space
+that ActSVD's edit *can* perturb, not its realized effect
 $Delta W bold(x)$ on inputs sampled from the data distribution. The
 behavioral benchmark, in which all three methods elevate ASR,
 provides stronger evidence that they share a common refusal mechanism,
@@ -467,15 +468,16 @@ entangled with utility. The DIM-selected direction (40× at layer~11,
 8.4× averaged) occupies a substantially less entangled region of the
 same space, and RCO's optimized 2-D cone has normalized subspace MSO
 of just 0.0030 (1.5× random) at rank 8 --- essentially orthogonal to
-the utility PCA basis, and lower than the 2-D random baseline at the
-same rank. RCO ablates more dimensions than DIM yet preserves
+the utility PCA basis, only modestly above the normalized random
+baseline at the same rank. RCO ablates more dimensions than DIM yet preserves
 perplexity at least as well, indicating that the dimensions it ablates
 contain less utility-relevant content. The gap between the full
-subspace and the selected direction partly reflects a dimensionality
-asymmetry: averaging 32 per-layer directions inflates the mean. The
-within-method comparison (DIM single direction at 8.4× vs.~RCO 2-D
-cone at 1.5×) avoids this asymmetry, since both quantities use the
-same normalized formula and the same rank-$k=8$ utility basis. We
+subspace and the selected direction partly reflects an object-level
+asymmetry: the full measure averages all per-layer candidates,
+including high-overlap early layers, while the selected direction is
+KL-filtered for intervention. The method-level comparison (DIM single
+direction at 8.4× vs.~RCO 2-D cone at 1.5×) uses the same rank-$k=8$
+utility basis and dimension-aware normalization. We
 emphasize that PCA-MSO is not a sufficient predictor of utility cost;
 the perplexity column of @tab_benchmark serves as the definitive
 behavioral test.

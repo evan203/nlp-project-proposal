@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run a local Geometry-paper-style RepInd profile analysis.
+# Run a local Wollschläger et al.-style RepInd profile analysis.
 #
 # By default this derives a small cone basis from high-norm DIM candidate
 # directions, so it can run without W&B artifacts. To evaluate trained RDO/RCO
