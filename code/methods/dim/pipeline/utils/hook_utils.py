@@ -39,33 +39,38 @@ def add_hooks(
             h.remove()
 
 def _orthonormal_basis(direction: Tensor) -> Tensor:
-    """Return an orthonormal column basis [d, k] from a [k, d] or [d] tensor."""
+    """Return an orthonormal column basis [d, k] from a [k, d] or [d] tensor.
+
+    For multi-D inputs, QR is computed in float32 because CUDA's `geqrf`
+    backend does not implement bf16/fp16. The returned basis is cast back to
+    the input's original dtype.
+    """
     if direction.ndim == 1:
         return (direction / (direction.norm() + 1e-8)).unsqueeze(-1)
-    # direction: [k, d]. Stack as columns and QR-orthonormalize.
-    cols = direction.t().contiguous()  # [d, k]
-    Q, _ = torch.linalg.qr(cols, mode="reduced")  # [d, k] orthonormal
-    return Q
-
-
-def _ablate_subspace(activation: Tensor, direction: Tensor) -> Tensor:
-    """Project activation onto the orthogonal complement of the subspace
-    spanned by `direction` (1D or 2D)."""
-    Q = _orthonormal_basis(direction).to(activation)  # [d, k]
-    proj = activation @ Q  # [..., k]
-    return activation - proj @ Q.t()
+    orig_dtype = direction.dtype
+    # [d, k] in fp32 for QR
+    cols_fp32 = direction.t().contiguous().to(torch.float32)
+    Q_fp32, _ = torch.linalg.qr(cols_fp32, mode="reduced")  # [d, k]
+    return Q_fp32.to(orig_dtype)
 
 
 def get_direction_ablation_input_pre_hook(direction: Tensor):
-    def hook_fn(module, input):
-        nonlocal direction
+    # Precompute the orthonormal basis once at hook construction so we don't
+    # redo QR on every forward pass.
+    basis_cache = {"Q": _orthonormal_basis(direction)}
 
+    def hook_fn(module, input):
         if isinstance(input, tuple):
             activation: Float[Tensor, "batch_size seq_len d_model"] = input[0]
         else:
             activation: Float[Tensor, "batch_size seq_len d_model"] = input
 
-        activation = _ablate_subspace(activation, direction)
+        Q = basis_cache["Q"]
+        if Q.device != activation.device or Q.dtype != activation.dtype:
+            Q = Q.to(device=activation.device, dtype=activation.dtype)
+            basis_cache["Q"] = Q
+        proj = activation @ Q  # [..., k]
+        activation = activation - proj @ Q.t()
 
         if isinstance(input, tuple):
             return (activation, *input[1:])
@@ -74,15 +79,20 @@ def get_direction_ablation_input_pre_hook(direction: Tensor):
     return hook_fn
 
 def get_direction_ablation_output_hook(direction: Tensor):
-    def hook_fn(module, input, output):
-        nonlocal direction
+    basis_cache = {"Q": _orthonormal_basis(direction)}
 
+    def hook_fn(module, input, output):
         if isinstance(output, tuple):
             activation: Float[Tensor, "batch_size seq_len d_model"] = output[0]
         else:
             activation: Float[Tensor, "batch_size seq_len d_model"] = output
 
-        activation = _ablate_subspace(activation, direction)
+        Q = basis_cache["Q"]
+        if Q.device != activation.device or Q.dtype != activation.dtype:
+            Q = Q.to(device=activation.device, dtype=activation.dtype)
+            basis_cache["Q"] = Q
+        proj = activation @ Q
+        activation = activation - proj @ Q.t()
 
         if isinstance(output, tuple):
             return (activation, *output[1:])
