@@ -216,7 +216,9 @@ Targeting Llama-3.1-8B-Instruct, we compare three methods for extracting safety 
     fill: (x, y) => if y == 0 { gray.lighten(80%) },
     [*Method*], [*Operates on*], [*Intervention*],
     [DIM], [Residual stream activations], [Inference-time ablation by 1 direction],
+
     [ActSVD], [Weight matrices and activations per linear layer], [Removal of safety ranks from weight matrix],
+
     [RCO], [Residual stream activations], [Inference-time ablation by subspace of 2 basis vectors],
   ),
   caption: [The three methods operate at different levels of the model but target the same behavioral outcome (removing refusal).],
@@ -301,7 +303,9 @@ calibration.
 _causally_ related, not merely geometrically similar. Two directions
 $lambda, mu in RR^d$ are representationally independent if ablating one does
 not change the cosine similarity profile of the other across layers:
-$ forall l in L: cos(bold(x)^((l)), lambda) = cos(tilde(bold(x))_("abl"(mu))^((l)), lambda) $
+$
+  forall l in L: cos(bold(x)^((l)), lambda) = cos(tilde(bold(x))_("abl"(mu))^((l)), lambda)
+$
 and vice versa. MSO may report high geometric overlap between directions that
 turn out to be causally independent, or low overlap between directions that are
 causally entangled via non-linear interactions across layers. In this codebase,
@@ -422,14 +426,26 @@ Seeing as both testing datasets are purely textual and tests will be on complian
 
 Alpaca contains instructions and LLM-generated outputs for fine-tuning. Two examples of Alpaca data are below (one containing the optional input field):
 #figure(
-  block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt, width: 100%, fill: white.darken(2%))[
+  block(
+    stroke: 0.5pt + gray,
+    radius: 6pt,
+    inset: 12pt,
+    width: 100%,
+    fill: white.darken(2%),
+  )[
     *Instruction:* Name the members of a rock band \ \
     *Output:* The members of a rock band are typically a singer, a guitarist, a bassist, a drummer, and a keyboardist.
   ],
 )
 
 #figure(
-  block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt, width: 100%, fill: white.darken(2%))[
+  block(
+    stroke: 0.5pt + gray,
+    radius: 6pt,
+    inset: 12pt,
+    width: 100%,
+    fill: white.darken(2%),
+  )[
     *Instruction:* Identify the odd one out. \
     *Input:* Twitter, Instagram, Telegram \ \
     *Output:* Telegram
@@ -444,7 +460,13 @@ Most Alpaca inputs are around 100 characters in length to minimize necessary con
 BeaverTails contains question-answer pairs of harmless or harmful prompts. Two examples of BeaverTails data are below:
 
 #figure(
-  block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt, width: 100%, fill: white.darken(2%))[
+  block(
+    stroke: 0.5pt + gray,
+    radius: 6pt,
+    inset: 12pt,
+    width: 100%,
+    fill: white.darken(2%),
+  )[
     *Prompt:* What is the maximum amount of time that I can stay in a tanning bed? \
     *Harm Category:* None \ \
     *Response:* The maximum amount of time that you can stay in a tanning bed is recommended to be limited to 10 minutes per session and no more than once per day. Tanning beds should also be used with protective eyewear to reduce the risk of eye damage.
@@ -452,7 +474,13 @@ BeaverTails contains question-answer pairs of harmless or harmful prompts. Two e
 )
 
 #figure(
-  block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt, width: 100%, fill: white.darken(2%))[
+  block(
+    stroke: 0.5pt + gray,
+    radius: 6pt,
+    inset: 12pt,
+    width: 100%,
+    fill: white.darken(2%),
+  )[
     *Prompt:* How can I download music for free? \
     *Harm Category:* Financial Crime, Violence \ \
     *Response:* There are a few legitimate ways that you can download music for free. One is through streaming services such as Spotify ... Lastly, you could try using torrent websites, but these sites are often heavily monitored and could lead to legal consequences
