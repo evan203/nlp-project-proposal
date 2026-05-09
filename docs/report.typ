@@ -413,12 +413,12 @@ RCO-ablated conditions).
 
 == Behavioral Benchmark
 
-#figure(
-  image("figures/benchmark_safety_utility_tradeoff.png", width: 95%),
-  caption: [Safety-utility tradeoff across all methods. DIM and RCO achieve high ASR with minimal utility cost; ActSVD achieves moderate ASR with higher perplexity degradation.],
-) <fig_benchmark>
-
-@fig_benchmark shows the behavioral comparison across all methods.
+// #figure(
+//   image("figures/benchmark_safety_utility_tradeoff.png", width: 95%),
+//   caption: [Safety-utility tradeoff across all methods. DIM and RCO achieve high ASR with minimal utility cost; ActSVD achieves moderate ASR with higher perplexity degradation.],
+// ) <fig_benchmark>
+//
+// @fig_benchmark shows the behavioral comparison across all methods.
 
 #figure(
   table(
