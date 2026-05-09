@@ -1,106 +1,98 @@
 # Comparing Safety-Removal Subspaces in Aligned LLMs
 
-Course project for COMP SCI 639 (Deep Learning for NLP). We compare three linear methods for removing safety behavior from Llama-3.1-8B-Instruct and ask whether they identify the same underlying refusal mechanism.
+Course project for COMP SCI 639 (Deep Learning for NLP). We compare three
+methods for removing refusal behavior from Llama-3.1-8B-Instruct and ask
+whether they identify the same underlying refusal mechanism.
 
 ## Research Questions
 
-1. **Cross-method agreement**: Do DIM, ActSVD, and RDO converge on the same safety-relevant subspace, or do they each capture a distinct mechanism?
-2. **Safety–utility entanglement**: How much do DIM safety directions overlap with harmless-instruction utility activation subspaces?
-3. **Causal independence**: Are the refusal directions identified by each method representationally independent under ablation (RepInd)?
+1. **Cross-method agreement**: Do DIM, ActSVD, and RCO converge on the same
+   safety-relevant mechanism, or do they each capture a distinct solution?
+2. **Safety-utility entanglement**: How much do refusal directions overlap with
+   harmless-instruction utility activation subspaces?
+3. **Causal independence**: Are the directions identified by each method
+   representationally independent under ablation (RepInd)?
 
 ## Methods
 
 | Method | Paper | What it identifies |
 |--------|-------|-------------------|
-| **DIM** | Arditi et al. 2024 | Single difference-in-means direction in residual stream |
-| **ActSVD** | Wei et al. 2024 | Low-rank safety/utility projection matrices via SVD |
-| **RDO** | Wollschläger et al. 2025 | Gradient-optimized refusal direction(s) / cone |
+| **DIM** | Arditi et al. 2024 | Single difference-in-means direction in the residual stream |
+| **ActSVD** | Wei et al. 2024 | Low-rank safety/utility projection in weight space |
+| **RCO** | Wollschlaeger et al. 2025 | Gradient-optimized 2-D refusal cone in activation space |
 
-## Current Results
+## Current Report Results
 
-| Model variant | JBB ASR | Harmless compliance |
-|---|---|---|
-| Base (Llama-3.1-8B-Instruct) | 0.16 | 1.00 |
-| DIM-Ablated | **1.00** | 1.00 |
-| ActSVD-Modified | 0.63 | 1.00 |
-| RDO (run `./scripts/run_rco_eval.sh`) | — | — |
+The shared final-report integration target is `docs/report.typ`, with the
+compiled PDF mirrored at `report.pdf`. The results section was transferred from
+`docs/claude_report.typ`. Both reports read figure files from `docs/figures/`.
+
+| Model variant | Substring ASR | Qwen3Guard ASR | Harmless compliance | Pile PPL | Alpaca PPL |
+|---|---:|---:|---:|---:|---:|
+| Base (Llama-3.1-8B-Instruct) | 0.15 | 0.00 | 1.00 | 13.93 | 8.60 |
+| DIM-Ablated | 1.00 | 0.90 | 1.00 | 14.17 | 8.80 |
+| ActSVD-Modified | 0.80 | 0.77 | 1.00 | 20.16 | 11.65 |
+| RCO-Cone-2 | 1.00 | **0.93** | 1.00 | 14.08 | 8.76 |
+| Random-Direction-7-1D | 0.16 | 0.00 | 0.98 | 14.65 | 8.86 |
+| Random-Subspace-7-2D | 0.14 | 0.00 | 0.99 | 14.61 | 8.78 |
 
 Key geometric findings:
 
-- DIM vs ActSVD MSO is near the random baseline for most layers, with a mild hotspot around layer 10.
-- Direct safety-vs-utility overlap is substantially above random: rank-8 mean MSO = 0.192 vs 0.00195 baseline.
-- RepInd is asymmetric: ablating DIM strongly changes derived basis profiles, but ablating those bases barely changes DIM.
+- DIM-vs-ActSVD and RCO-vs-ActSVD have a layer-10 overlap hotspot, but the
+  weight-space bridge is treated as exploratory.
+- The full DIM mean-difference stack overlaps the rank-8 utility PCA basis at
+  98x random, while the selected DIM direction is 40x at layer 11.
+- RCO's optimized 2-D cone has normalized utility overlap of 0.0030, or 1.5x
+  random, while preserving perplexity comparably to DIM.
+- RepInd and the prompt-attack probe suggest DIM captures a dominant but
+  non-exhaustive refusal mediator.
 
 ## Repository Layout
 
-```
+```text
 docs/
-  report.typ                 Final report (Typst format).
-  slides.typ                 Midterm presentation slides.
-  figures/                   PNG figures copied from code/results/ for Typst.
+  claude_report.typ          Active final report source.
+  claude_report.pdf          Compiled active report.
+  figures/                   Report-ready PNG figures used by claude_report.typ.
   bibliography.bib           Citations.
 
 code/
   methods/
     dim/                     DIM refusal-direction pipeline (Arditi et al.).
     actsvd/                  ActSVD low-rank modification pipeline (Wei et al.).
-    cones-repind/            RDO/RCO training and RepInd code (Wollschläger et al.).
+    cones-repind/            RCO/RDO training and RepInd code (Wollschlaeger et al.).
   analysis/
-    plot_benchmarks.py       Safety-utility tradeoff plots; also TruthfulQA + LLM-judge bars.
-    plot_method_overlap.py   DIM-vs-ActSVD MSO plots.
-    plot_safety_utility_overlap.py  Direct safety-vs-utility overlap plots.
-    plot_geometry_repind.py  RepInd heatmap and profile plots.
-    plot_attack_types.py     Probe scatter / boxplot / layer sweep / ablation cross-test plots.
-    safety_utility_overlap.py      Direct overlap analysis runner.
-    geometry_repind.py       RepInd cosine-profile comparison runner.
-    eval_direction_benchmark.py    Evaluate any direction on JBB + harmless + PPL + TruthfulQA.
-    judge_completions.py     Post-hoc LLM judge: unmodified base Llama grades all saved completions.
-    probe_attack_types.py    Probe whether WildJailbreak prompts suppress the refusal direction
-                              (extends Arditi et al. §5.1; layer sweep + ablation cross-test).
-  results/
-    benchmark/               JBB ASR, harmless compliance, perplexity JSON + plots.
-    method_overlap/          DIM-vs-ActSVD MSO JSON + plots.
-    safety_utility_overlap/  Safety-vs-utility MSO JSON + plots.
-    geometry_repind/         RepInd JSON + plots (DIM-derived basis).
-    geometry_repind_rco/     RepInd JSON + plots (DIM + RDO directions, after run_rco_eval.sh).
+    eval_direction_benchmark.py    Evaluate base, DIM, ActSVD, RCO, or random subspaces.
+    judge_completions.py           Post-hoc Qwen3Guard judge over saved completions.
+    compute_method_overlap.py      DIM/RCO-vs-ActSVD weight-delta MSO.
+    safety_utility_overlap.py      Safety-vs-utility activation-overlap analysis.
+    geometry_repind.py             RepInd cosine-profile comparison runner.
+    probe_attack_types.py          HarmBench/WildJailbreak prompt probe.
+    plot_*.py                      Plotting scripts for the analyses above.
+  results/                  Local/generated analysis outputs. Not used directly by the report.
   tools/
-    chat.py                  Interactive chat with any saved modified model.
-  data-exploration/          Alpaca and BeaverTails EDA scripts and plots.
+    chat.py                  Interactive chat with a saved modified model.
   llm_weights/               Local HF cache (git-ignored).
 
-Selected Papers/             Reference paper PDFs and extracted TeX.
+colab_results_v3/            Latest extracted Colab run artifacts used for final figures/data.
 
 scripts/
   run_dim.sh                 Run DIM pipeline.
-  run_actsvd.sh              Run ActSVD pipeline (paper-optimal r^u=3950, r^s=4090 by default).
-  run_rco.sh                 Run RDO/RCO training.
-  run_rco_eval.sh            Train RDO + extract direction + evaluate on benchmark + RepInd.
-  run_safety_utility_overlap.sh  Run direct safety-vs-utility overlap analysis.
-  run_geometry_repind.sh     Run lightweight RepInd analysis.
-  run_probe_attack_types.sh  Run prompt-attack probe (HarmBench + WildJailbreak), with
-                              optional LAYER_SWEEP=1 / ABLATION_CROSS=1 / BOOTSTRAP=1000.
-  run_all_experiments.sh     End-to-end runner (all methods + figures).
-  build_rco_directions_json.py   Extract trained direction from local wandb artifacts.
-  sync_figures.py            Copy result plots to docs/figures/.
-  inventory.py               Report all local model artifacts.
+  run_actsvd.sh              Run ActSVD pipeline (r^u=3950, r^s=4090 by default).
+  run_rco.sh                 Run RCO/RDO training backend.
+  run_rco_eval.sh            Train RCO, extract direction, benchmark, and run RepInd.
+  run_behavioral_benchmark.sh  Reproduce the full behavioral benchmark table.
+  run_safety_utility_overlap.sh  Run safety-vs-utility overlap analysis.
+  run_method_overlap.sh      Run DIM/RCO-vs-ActSVD weight-delta MSO.
+  run_geometry_repind.sh     Run RepInd profile analysis.
+  run_probe_attack_types.sh  Run prompt-attack probe with layer sweep and ablation cross-test.
+  run_all_experiments.sh     Convenience runner for the major script steps.
+  build_rco_directions_json.py   Extract trained RCO direction artifacts.
+  sync_figures.py            Copy generated plots to docs/figures/.
+  inventory.py               Report local model artifacts.
 
 notebooks/
-  colab_end_to_end.ipynb     Complete Colab notebook for running all experiments.
-
-archive/                     Old reference code (not part of the active workflow).
-```
-
-## Local Model Artifacts
-
-| Path | Size | Description |
-|------|------|-------------|
-| `code/llm_weights/` | ~30 GB | Base Llama-3.1-8B-Instruct (HF cache) |
-| `code/methods/actsvd/out/` | ~15 GB | ActSVD-modified model |
-| `code/methods/dim/pipeline/runs/Llama-3.1-8B-Instruct/modified_model/` | ~15 GB | DIM-modified model |
-| `code/methods/cones-repind/results/modified_model/Llama-3.1-8B-Instruct/` | ~15 GB | DIM-modified model (cones pipeline) |
-
-```bash
-python scripts/inventory.py
+  colab_end_to_end.ipynb     Guided Colab workflow for reproducing the experiments.
 ```
 
 ## Setup
@@ -110,191 +102,213 @@ cd code
 uv sync
 ```
 
-For gated Llama models:
+For gated Llama models and WildJailbreak access:
 
 ```bash
 huggingface-cli login
+export HF_TOKEN=...
 ```
 
-The scripts default `HF_HOME` to `code/llm_weights`, so downloads stay in-project.
+The scripts default `HF_HOME` to `code/llm_weights`, so downloads stay
+in-project. The full Llama-3.1-8B-Instruct workflow expects an A100-class GPU;
+ActSVD can require an A100 80 GB runtime depending on environment settings.
 
-## Running Experiments
+## Guided Colab Workflow
 
-### DIM (Method 1)
+The recommended reproduction path is `notebooks/colab_end_to_end.ipynb`. Open it
+in Google Colab, select an A100 GPU runtime, authenticate Hugging Face, and run
+the cells in order. The notebook runs the same scripts documented below and
+packages the resulting JSON files, figures, and direction tensors into
+`colab_results.zip`.
+
+The notebook writes report-facing figures to `docs/figures/` and lightweight
+artifacts to `code/results/`. Modified model weights are not included in the
+zip because they are too large for direct notebook download.
+
+## Script Workflow
+
+Run commands from the repository root unless noted otherwise. Each script honors
+`PYTHON_RUNNER`; if unset, scripts prefer `uv run python` when `uv` is available
+and otherwise fall back to `python`.
+
+### 1. Train or Load Method Artifacts
+
+DIM:
 
 ```bash
-./scripts/run_dim.sh
-# Override model:
-MODEL_PATH=google/gemma-2b-it ./scripts/run_dim.sh
+MODEL_PATH=meta-llama/Llama-3.1-8B-Instruct scripts/run_dim.sh
 ```
 
-### ActSVD (Method 2)
+ActSVD with report hyperparameters:
 
 ```bash
-./scripts/run_actsvd.sh
-# Quicker smoke test:
-NSAMPLES=32 ./scripts/run_actsvd.sh
-# Full eval:
-EVAL_PPL=1 EVAL_ATTACK=1 ./scripts/run_actsvd.sh
+MODEL_ALIAS=Llama-3.1-8B-Instruct \
+RANK_POS=3950 RANK_NEG=4090 NSAMPLES=128 \
+scripts/run_actsvd.sh
 ```
 
-### RDO / RCO (Method 3 — The Geometry Paper)
-
-Train, extract, and evaluate in one command:
+RCO 2-D cone:
 
 ```bash
-./scripts/run_rco_eval.sh
-# Overrides:
-MODEL=meta-llama/Llama-3.1-8B-Instruct MODE=direction METHOD_NAME=RDO ./scripts/run_rco_eval.sh
-# Full 2D cone:
-MODEL=meta-llama/Llama-3.1-8B-Instruct MODE=cone CONE_DIM=2 METHOD_NAME=RCO-cone ./scripts/run_rco_eval.sh
-# Skip training if artifacts already exist:
-SKIP_TRAIN=1 ./scripts/run_rco_eval.sh
+MODE=cone CONE_DIM=2 METHOD_NAME=RCO-Cone-2 scripts/run_rco_eval.sh
 ```
 
-Or run only the training step:
+`run_rco_eval.sh` trains the cone, extracts the trained 2-D basis to
+`code/results/geometry_repind/rco_direction.pt`, evaluates RCO on the benchmark,
+and runs the DIM-vs-RCO RepInd comparison.
+
+### 2. Behavioral Benchmark
+
+After the DIM, ActSVD, and optional RCO artifacts exist, reproduce the full
+behavioral benchmark table with:
 
 ```bash
-MODEL=meta-llama/Llama-3.1-8B-Instruct MODE=direction ./scripts/run_rco.sh
+scripts/run_behavioral_benchmark.sh
 ```
 
-### Subspace Analyses
+This evaluates the base model, DIM, ActSVD, RCO when
+`code/results/geometry_repind/rco_direction.pt` exists, both random baselines,
+the post-hoc Qwen3Guard judge, and benchmark plots. The main output is
+`code/results/benchmark/benchmark_results.json`.
 
-```bash
-# Direct safety-vs-utility overlap (how much do safety directions lie inside utility activations?)
-./scripts/run_safety_utility_overlap.sh
-UTILITY_RANKS=1,2,4,8,16,32 PRIMARY_RANK=8 ./scripts/run_safety_utility_overlap.sh
-
-# RepInd profile analysis (DIM-derived basis, no training required)
-./scripts/run_geometry_repind.sh
-
-# RepInd with trained RDO direction (after run_rco_eval.sh)
-DIRECTIONS_JSON=code/results/geometry_repind/directions_rco.json \
-  OUTPUT_DIR=code/results/geometry_repind_rco \
-  ./scripts/run_geometry_repind.sh
-```
-
-### Prompt-attack probe
-
-Extends Arditi et al. §5.1's adversarial-suffix analysis from one GCG suffix on
-Qwen 1.8B to in-the-wild WildJailbreak prompts on Llama-3.1-8B, with a per-layer
-projection sweep, RCO-direction comparison, and an ablation cross-test that
-generates each prompt twice (base model and DIM-ablated).
-
-```bash
-# Run probe (HF_TOKEN required for WildJailbreak access)
-LAYER_SWEEP=1 ABLATION_CROSS=1 BOOTSTRAP=1000 ./scripts/run_probe_attack_types.sh
-```
-
-### Post-hoc LLM judge (consistent across methods)
-
-Loads the *unmodified* base Llama once and grades every saved
-`*_jbb_ablation_completions.json` with the same judge. Avoids the
-cross-method confound where DIM-ablated / ActSVD-modified / RCO-cone
-runs would otherwise judge themselves with the very intervention that
-compromised refusal.
+The wrapper is equivalent to the explicit commands below. They are kept here so
+each reported row can be rerun independently if needed:
 
 ```bash
 cd code
-uv run python analysis/judge_completions.py \
-  --model_path meta-llama/Llama-3.1-8B-Instruct \
-  --benchmark_dir results/benchmark
-```
 
-### Random-direction sanity check
+python analysis/eval_direction_benchmark.py \
+  --no_ablation \
+  --method_name "Base (Llama-3.1-8B-Instruct)" \
+  --eval_ppl --n_ppl_samples 64 \
+  --eval_truthfulqa --n_tqa_samples 64 \
+  --bootstrap 1000
 
-Ablating a `N(0, I)` random unit vector should leave ASR near baseline.
-Standard counterfactual missing from all four reference papers.
-
-```bash
-cd code
-uv run python analysis/eval_direction_benchmark.py \
-  --model_path meta-llama/Llama-3.1-8B-Instruct \
-  --random_direction --seed 7 \
-  --method_name Random-Direction-7 \
-  --eval_ppl --eval_truthfulqa --bootstrap 1000
-```
-
-### Evaluate any saved direction
-
-```bash
-cd code
-uv run python analysis/eval_direction_benchmark.py \
+python analysis/eval_direction_benchmark.py \
   --direction_path methods/dim/pipeline/runs/Llama-3.1-8B-Instruct/direction.pt \
-  --method_name DIM-verify
+  --direction_metadata methods/dim/pipeline/runs/Llama-3.1-8B-Instruct/direction_metadata.json \
+  --method_name DIM-Ablated \
+  --eval_ppl --n_ppl_samples 64 \
+  --eval_truthfulqa --n_tqa_samples 64 \
+  --bootstrap 1000
+
+python analysis/eval_direction_benchmark.py \
+  --modified_model_path methods/actsvd/out \
+  --method_name ActSVD-Modified \
+  --eval_ppl --n_ppl_samples 64 \
+  --eval_truthfulqa --n_tqa_samples 64 \
+  --bootstrap 1000
+
+python analysis/eval_direction_benchmark.py \
+  --random_direction --random_subspace_dim 1 --seed 7 \
+  --method_name Random-Direction-7-1D \
+  --eval_ppl --n_ppl_samples 64 \
+  --eval_truthfulqa --n_tqa_samples 64 \
+  --bootstrap 1000
+
+python analysis/eval_direction_benchmark.py \
+  --random_direction --random_subspace_dim 2 --seed 7 \
+  --method_name Random-Subspace-7-2D \
+  --eval_ppl --n_ppl_samples 64 \
+  --eval_truthfulqa --n_tqa_samples 64 \
+  --bootstrap 1000
 ```
 
-### Full end-to-end
+After all methods have saved completions, run the external judge:
 
 ```bash
-# Default: DIM + ActSVD + overlap + RepInd (no RCO training)
-./scripts/run_all_experiments.sh
+python analysis/judge_completions.py \
+  --benchmark_dir results/benchmark \
+  --judge_model_path Qwen/Qwen3Guard-Gen-4B \
+  --bootstrap 1000
 
-# With RDO:
-RUN_RCO=1 RCO_MODE=direction RCO_METHOD_NAME=RDO ./scripts/run_all_experiments.sh
-
-# Skip expensive steps:
-RUN_ACTSVD=0 RUN_FIGURES=1 ./scripts/run_all_experiments.sh
-```
-
-## Regenerating Figures
-
-```bash
-cd code
-uv run python analysis/plot_benchmarks.py
-uv run python analysis/plot_method_overlap.py
-uv run python analysis/plot_safety_utility_overlap.py
-uv run python analysis/plot_geometry_repind.py
+python analysis/plot_benchmarks.py
 cd ..
-python scripts/sync_figures.py
 ```
 
-## Google Colab (Recommended for GPU-limited users)
+`Controversial` Qwen3Guard outputs are counted as not jailbroken unless
+`--include_controversial` is passed.
 
-Open `notebooks/colab_end_to_end.ipynb` in Google Colab with an **A100 GPU runtime**.
-
-Quick start:
-
-```
-Runtime → Change runtime type → GPU → A100 (or A100 80 GB for ActSVD)
-```
-
-The notebook covers all steps end-to-end, including RDO training on Llama-3.1-8B-Instruct.
-
-If you don't have A100 access, use `MODEL_PATH = "google/gemma-2b-it"` and skip ActSVD — DIM + RDO + analyses fit on a T4.
-
-Minimal command sequence for Colab:
+### 3. Geometry Analyses
 
 ```bash
-git clone -b findings https://github.com/evan203/nlp-project-proposal.git
-cd nlp-project-proposal
+scripts/run_safety_utility_overlap.sh
+scripts/run_method_overlap.sh
+scripts/run_geometry_repind.sh
+scripts/run_probe_attack_types.sh
+```
 
-pip install -U torch transformers accelerate datasets sentencepiece protobuf \
-    tqdm jaxtyping matplotlib seaborn zstandard litellm einops nnsight==0.3.7 \
-    vllm python-dotenv wandb
+These run, respectively:
 
-huggingface-cli login
+- safety-vs-utility activation PCA overlap,
+- DIM/RCO overlap with the ActSVD weight-delta column space,
+- RepInd cosine-profile analysis,
+- prompt-attack probe with layer sweep and ablation cross-test.
 
-MODEL_PATH=meta-llama/Llama-3.1-8B-Instruct PYTHON_RUNNER=python ./scripts/run_dim.sh
-MODEL_ALIAS=Llama-3.1-8B-Instruct PYTHON_RUNNER=python NSAMPLES=128 ./scripts/run_actsvd.sh
-MODEL=meta-llama/Llama-3.1-8B-Instruct MODE=direction PYTHON_RUNNER=python ./scripts/run_rco_eval.sh
-MODEL_PATH=meta-llama/Llama-3.1-8B-Instruct PYTHON_RUNNER=python ./scripts/run_safety_utility_overlap.sh
-MODEL_PATH=meta-llama/Llama-3.1-8B-Instruct PYTHON_RUNNER=python ./scripts/run_geometry_repind.sh
+The prompt probe streams WildJailbreak and requires `HF_TOKEN`.
 
-python code/analysis/plot_benchmarks.py
-python code/analysis/plot_method_overlap.py
-python code/analysis/plot_safety_utility_overlap.py
-python code/analysis/plot_geometry_repind.py
-python scripts/sync_figures.py
+Expected outputs:
+
+| Report item | Command | Main output |
+|---|---|---|
+| Behavioral benchmark table and tradeoff plot | `scripts/run_behavioral_benchmark.sh` | `code/results/benchmark/benchmark_results.json`, `code/results/benchmark/*.png` |
+| Figure 2 cross-method MSO | `scripts/run_method_overlap.sh` | `code/results/method_overlap/comparison_results.json`, `code/results/method_overlap/mso_per_layer.png` |
+| Safety-utility overlap table/figure | `scripts/run_safety_utility_overlap.sh` | `code/results/safety_utility_overlap/safety_utility_overlap_results.json`, `safety_utility_overlap_per_layer.png` |
+| RepInd heatmap | `scripts/run_geometry_repind.sh` or the RepInd step inside `scripts/run_rco_eval.sh` | `code/results/geometry_repind_rco/geometry_repind_results.json`, `repind_change_heatmap.png` |
+| Prompt-attack probe | `scripts/run_probe_attack_types.sh` | `code/results/probe_attack_types/results.json`, probe figure PNGs |
+
+### 4. Figures and Report
+
+For a fresh local run, sync generated plots into the report figure directory:
+
+```bash
+scripts/sync_figures.py
+```
+
+For this final submission, `docs/figures/` has already been prepared from
+`colab_results_v3/`. The report uses only `docs/figures/*`, not
+`code/results/*`.
+
+Compile the shared final report:
+
+```bash
+typst compile --root . docs/report.typ report.pdf
+```
+
+Compile the standalone results source:
+
+```bash
+cd docs
+typst compile claude_report.typ
+cp claude_report.pdf ../report.pdf
+```
+
+Typst may warn about missing template fonts (`inconsolata` and
+`tex gyre termes`) on machines that do not have them installed; the report still
+compiles successfully with fallback fonts.
+
+## Local Model Artifacts
+
+| Path | Size | Description |
+|------|------|-------------|
+| `code/llm_weights/` | ~30 GB | Base Llama-3.1-8B-Instruct HF cache |
+| `code/methods/actsvd/out/` | ~15 GB | ActSVD-modified model |
+| `code/methods/dim/pipeline/runs/Llama-3.1-8B-Instruct/` | varies | DIM direction, metadata, completions, optional modified model |
+| `code/methods/cones-repind/results/` | varies | RCO/RDO training artifacts |
+
+```bash
 python scripts/inventory.py
 ```
 
-## Chat with Modified Models
+## Lightweight Validation
+
+These checks do not run the expensive model experiments, but they catch syntax,
+import, shell, and Typst errors in the submitted code paths:
 
 ```bash
-cd code
-uv run python tools/chat.py \
-  --model_path methods/dim/pipeline/runs/Llama-3.1-8B-Instruct/modified_model
+bash -n scripts/*.sh
+python -m compileall -q code/analysis scripts code/tools
+typst compile --root . docs/report.typ /tmp/report-check.pdf
 ```
 
 ## Reference Papers
@@ -303,57 +317,5 @@ uv run python tools/chat.py \
 |-------|------------|----------|
 | Arditi et al. 2024 | DIM | `Selected Papers/Refusal in Language Models/` |
 | Wei et al. 2024 | ActSVD | `Selected Papers/Assessing the Brittlness/` |
-| Wollschläger et al. 2025 | RDO/RCO/RepInd | `Selected Papers/The Geometry/` |
+| Wollschlaeger et al. 2025 | RCO/RDO/RepInd | `Selected Papers/The Geometry/` |
 | Ponkshe et al. 2026 | MSO, safety subspace entanglement | `Selected Papers/Safety Subspaces/` |
-
-## Logistics
-
-The class project will be carried out in groups of 5 or 6 people. Please actively search your teammate either posting a note on piazza or chatting after class. Every team has 3 late days in total for HW 3 and 5.
-
-## Submission Information
-
-In **Course Project**, you should also turn in a report that provides an overview of your idea and also contains a brief survey of related work on the topic. Please submit the following the report to Canvas.
-
-- **a report**: This should be named "report.pdf" in the top directory. This can be **up to 8 pages** for HW 5. References are not included in the page count, and it is OK to submit appendices that include supplementary information such as hyperparameter settings or additional output examples, although there is no guarantee that the grader will read them. Submissions that exceed the page count will be penalized one third grade (33%) for each page over. The report must use the official ACL style templates, which are available from [here](https://github.com/acl-org/acl-style-files) (Latex and Word). Please follow the paper formatting guidelines general to *ACL* conferences available [here](https://acl-org.github.io/ACLPUB/formatting.html). The proposal report should include the following information:
-
-  - Project title and list of group members.
-  - Introduction about the research topic, including the motivation of your work, brief comparision with prior work, and contributions of this report. This should be approximately 1-1.5 pages long.
-  - A short literature survey of 4 or more relevant papers. The literature review should take up approximately 0.5-1 page.
-  - Description of your proposed methods beyond the existing work. For reports focusing on data curation, this section should describe the detailed steps for the dataset/annotation collection. This should be approximately 1.5-2 pages long.
-  - Description of your experimental settings, including the datasets you used, the methods/models in comparison, the hyperparameters used for all methods, and any preprocessing steps you did for the datasets.
-  - Detailed experimental results and fine-grained analysis. This should be approximately 2 pages long.
-  - Conclusion and discussion about the strengths and limitations of your work, and highlight potential future directions. This should be approximately 0.5 page long.
-  - Detailed contribution of the group members. This should be approximately 0.5 page long.
-
-## Grading
-
-The course project takes up 30% of your final grading.
-
-- Report (10%)
-- Code (10%)
-- Presentation (10%)
-
-The grading breakdown for the report is as follows:
-
-- 15% for clear description of the introduction and motivation
-- 25% for clear and concise description of proposed method
-- 25% for literature survey that covers at least 4 relevant papers
-- 25% for the experimental settings and analysis.
-- 10% for quality of writing
-
-The grading breakdown for the code is as follows:
-
-- 100: The code is well-organized, including all experiment scripts (e.g., bash scripts, python files). All experimental results can be easily reproduciable without errors. Detailed instructions on the readme are provided. Every team member contributes roughly the same amounts of efforts to the repository.
-- 95: Most (>80%) experiment scripts are included. Experiments can be reproduced with some efforts. Instructions on at least 80% of the experiments are provided. All team member contributes to the repository.
-- 90: Some (50%) key experiment scripts are included. At least half of the experiments can be reproduced. Instructions on at least 50% of the experiments are provided. Most team member contributes to the repository.
-- 85: Parts of the key experiment scripts are missing. 30% of the experiments can be reproduced. Instructions are largely missing. Only 2 team members contribute to the repository.
-- 80: Many key experiment scripts are missing. It's not easiy to reproduce the experiments. Instructions are missing. Only one member contributes to the repository.
-
-Each team will have 8 mins for the presentation (6 mins for talk and 2 mins for QA). The grading breakdown for the presentation is as follows:
-Please sign up the presentation slots in advance.
-
-- 15% for the clear description about the task, and the motivation of your work.
-- 25% for the concise summary of the existing works.
-- 25% for the clear description of proposed method (with animation if possible).
-- 25% for the experimental results and analysis.
-- 10% for the QA.

@@ -34,21 +34,28 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_named_direction(spec: str) -> tuple[str, torch.Tensor]:
+    """Load a direction or cone from a .pt file.
+
+    Returns a `[d]` 1-D direction or a `[k, d]` cone basis. Each row is
+    unit-norm; the caller orthonormalizes via QR for true subspace MSO.
+    """
     name, path_str = spec.split(":", 1)
     path = Path(path_str)
     raw = torch.load(path, map_location="cpu", weights_only=True)
     if isinstance(raw, dict):
         raw = next(iter(raw.values()))
     if isinstance(raw, list):
-        raw = raw[0]
+        raw = torch.stack([torch.as_tensor(x) for x in raw])
     direction = torch.as_tensor(raw).float()
-    if direction.ndim > 1:
-        direction = direction[0]
-    direction = direction.flatten()
-    norm = direction.norm()
-    if norm < 1e-12:
-        raise ValueError(f"Direction from {path} has near-zero norm.")
-    return name, direction / norm
+    if direction.ndim == 1:
+        norm = direction.norm()
+        if norm < 1e-12:
+            raise ValueError(f"Direction from {path} has near-zero norm.")
+        return name, direction / norm
+    if direction.ndim == 2:
+        norms = direction.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+        return name, direction / norms
+    raise ValueError(f"Direction from {path} has unexpected shape {tuple(direction.shape)}.")
 
 
 def find_safetensors_files(model_dir: Path) -> list[Path]:
@@ -88,6 +95,22 @@ def compute_mso_for_direction(
     weight_types: list[str],
     svd_threshold: float,
 ) -> dict[str, dict]:
+    """Compute per-(layer, weight) MSO between `direction` and the
+    ActSVD weight-delta column space.
+
+    `direction` is `[d]` (1-D direction) or `[k, d]` (k-direction subspace).
+    For a 1-D direction, MSO = ||U_B^T s||^2 in [0, 1]; random baseline k_B/d.
+    For a k-D subspace, MSO = ||U_B^T Q_S||_F^2 / min(k_S, k_B), where Q_S is
+    an orthonormal basis for the subspace; random baseline = max(k_S, k_B)/d.
+    """
+    is_subspace = direction.ndim == 2
+    if is_subspace:
+        cols = direction.t().contiguous()  # [d, k_S]
+        Q_S, _ = torch.linalg.qr(cols, mode="reduced")  # [d, k_S]
+        k_S = Q_S.shape[1]
+    else:
+        Q_S = None
+        k_S = 1
     results = {}
     # Detect number of layers from base model index or by iterating
     # Find all layer indices by scanning shard keys for one weight type
@@ -137,25 +160,28 @@ def compute_mso_for_direction(
                 mask[0] = True
 
             U_B = U[:, mask]  # [out, k_B]
-            d = direction.shape[0]
+            d = direction.shape[-1]
 
-            # Project direction onto U_B columns (U_B has shape [out, k_B])
-            # direction has shape [d]; if d != out, skip
             if d != U_B.shape[0]:
                 print(f"  Skipping {tensor_key}: direction dim {d} != weight out dim {U_B.shape[0]}")
                 continue
 
-            mso = float(torch.square(U_B.T @ direction).sum().item())
-            random_baseline = k_B / d
+            if is_subspace:
+                proj = U_B.t() @ Q_S  # [k_B, k_S]
+                mso = float(torch.square(proj).sum().item()) / float(min(k_S, k_B))
+                random_baseline = float(max(k_S, k_B)) / d
+            else:
+                mso = float(torch.square(U_B.t() @ direction).sum().item())
+                random_baseline = k_B / d
 
             results[tensor_key] = {
                 "mso": mso,
-                "k_A": 1,
+                "k_A": k_S,
                 "k_B": k_B,
                 "d": d,
                 "random_baseline": random_baseline,
             }
-            print(f"  {tensor_key}: MSO={mso:.4f}, k_B={k_B}, baseline={random_baseline:.4f}")
+            print(f"  {tensor_key}: MSO={mso:.4f}, k_A={k_S}, k_B={k_B}, baseline={random_baseline:.4f}")
 
     return results
 
@@ -182,21 +208,39 @@ def main() -> None:
         data = json.loads(args.output.read_text())
     data.setdefault("mso", {})
     data.setdefault("direction_cosine", {})
+    data.setdefault("principal_cosines", {})
 
-    # Compute direction-pair cosine similarities
+    # Compute direction-pair similarities. For 1-D vs 1-D this is a true cosine.
+    # For 1-D vs k-D or k-D vs k-D we report the maximum singular value of
+    # the cross-projection (= cosine of the smallest principal angle), which
+    # reduces to the cosine when both sides are 1-D.
+    def _orthonormal_cols(d: torch.Tensor) -> torch.Tensor:
+        if d.ndim == 1:
+            return (d / d.norm().clamp_min(1e-12)).unsqueeze(-1)  # [d, 1]
+        Q, _ = torch.linalg.qr(d.t().contiguous(), mode="reduced")  # [d, k]
+        return Q
+
     if len(named_directions) >= 2:
-        print("\nComputing direction cosine similarities...")
+        print("\nComputing direction-pair principal-angle cosines ...")
         for i in range(len(named_directions)):
             for j in range(i + 1, len(named_directions)):
                 name_i, dir_i = named_directions[i]
                 name_j, dir_j = named_directions[j]
-                if dir_i.shape != dir_j.shape:
-                    print(f"  Skipping {name_i} vs {name_j}: shape mismatch {dir_i.shape} vs {dir_j.shape}")
+                if dir_i.shape[-1] != dir_j.shape[-1]:
+                    print(f"  Skipping {name_i} vs {name_j}: hidden-dim mismatch "
+                          f"{dir_i.shape[-1]} vs {dir_j.shape[-1]}")
                     continue
-                cos_sim = float(torch.dot(dir_i, dir_j).item())
+                Qi = _orthonormal_cols(dir_i)
+                Qj = _orthonormal_cols(dir_j)
+                # Principal-angle cosine between the two subspaces.
+                M = Qi.t() @ Qj  # [k_i, k_j]
+                singular = torch.linalg.svdvals(M).tolist()
+                top_cos = float(singular[0]) if singular else 0.0
                 pair_key = f"{name_i}_vs_{name_j}"
-                data["direction_cosine"][pair_key] = cos_sim
-                print(f"  {pair_key}: cosine={cos_sim:.4f}")
+                data["direction_cosine"][pair_key] = top_cos
+                data["principal_cosines"][pair_key] = singular
+                print(f"  {pair_key}: top principal cosine={top_cos:.4f}, "
+                      f"all={['%.3f' % s for s in singular]}")
 
     # Compute MSO for each direction vs ActSVD
     actsvd_path = args.actsvd_model_path

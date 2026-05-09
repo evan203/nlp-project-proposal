@@ -74,15 +74,14 @@ def _bootstrap_ci(values: list[float], n_bootstrap: int = 1000,
     return float(_np.quantile(means, alpha)), float(_np.quantile(means, 1 - alpha))
 
 
-# NOTE: The previous in-line LLM judge has been removed.
+# NOTE: Safety judging runs in analysis/judge_completions.py.
 # Using the *loaded* model as judge is unsafe when the loaded model has
 # safety-removal hooks active (DIM ablation) or modified weights
 # (ActSVD, RCO weight-edited): the very intervention that compromised
 # refusal also compromises the judge's ability to detect refusal.
 #
-# The post-hoc script `analysis/judge_completions.py` loads the unmodified
-# base model exactly once and grades all saved completions JSON files in a
-# single pass — same judge for every method.
+# The post-hoc script loads Qwen3Guard exactly once and grades all saved
+# completions JSON files in a single pass: same external judge for every method.
 
 
 def evaluate_truthfulqa(
@@ -199,23 +198,38 @@ def parse_args() -> argparse.Namespace:
                    help="Generate a random unit-norm direction instead of loading "
                         "from --direction_path. The shape is taken from the model's "
                         "hidden size. Use as a sanity-check baseline.")
+    p.add_argument("--random_subspace_dim", type=int, default=1,
+                   help="Dimensionality of the random subspace baseline. "
+                        "Pass 2 (matched to RCO's cone dim) for an apples-to-apples "
+                        "intervention-rank comparison with RCO. Only used when "
+                        "--random_direction is set.")
     return p.parse_args()
 
 
 def load_direction(path: Path) -> torch.Tensor:
-    """Load a direction from a .pt file. Handles dicts, 2-D cones (first vector), and 1-D tensors."""
+    """Load an ablation subspace from a .pt file.
+
+    Returns a `[d]` tensor for 1-D directions or a `[k, d]` tensor for
+    a k-dimensional cone basis (each row is a unit-norm basis vector).
+    The downstream ablation hook handles both shapes via subspace projection.
+    """
     raw = torch.load(path, map_location="cpu", weights_only=True)
     if isinstance(raw, dict):
-        # Cone dict keyed by name; take first value
+        # Cone dict keyed by name; take the first value
         raw = next(iter(raw.values()))
     direction = torch.as_tensor(raw).float()
-    if direction.ndim > 1:
-        direction = direction[0]
-    direction = direction.flatten()
-    norm = direction.norm()
-    if norm < 1e-12:
-        raise ValueError(f"Direction from {path} has near-zero norm.")
-    return direction / norm
+    if direction.ndim == 1:
+        norm = direction.norm()
+        if norm < 1e-12:
+            raise ValueError(f"Direction from {path} has near-zero norm.")
+        return direction / norm
+    if direction.ndim == 2:
+        # Multi-direction (cone) basis. Normalize each row separately.
+        norms = direction.norm(dim=-1, keepdim=True)
+        if (norms < 1e-12).any():
+            raise ValueError(f"Direction from {path} has a near-zero-norm row.")
+        return direction / norms
+    raise ValueError(f"Direction from {path} has unexpected shape {tuple(direction.shape)}.")
 
 
 def generate_completions_simple(
@@ -341,13 +355,20 @@ def main() -> None:
             model_base = construct_model_base(args.model_path)
             d_model = model_base.model.config.hidden_size
             torch.manual_seed(args.seed)
-            direction = torch.randn(d_model, dtype=torch.float)
-            direction = direction / direction.norm()
-            print(f"Random direction generated: shape={direction.shape}, "
-                  f"norm={direction.norm():.4f}, seed={args.seed}")
+            k = max(1, args.random_subspace_dim)
+            if k == 1:
+                direction = torch.randn(d_model, dtype=torch.float)
+                direction = direction / direction.norm()
+            else:
+                # k orthonormal Gaussian directions: a random k-dim subspace.
+                cols = torch.randn(d_model, k, dtype=torch.float)
+                Q, _ = torch.linalg.qr(cols, mode="reduced")
+                direction = Q.t().contiguous()  # [k, d]
+            print(f"Random direction generated: shape={tuple(direction.shape)}, "
+                  f"seed={args.seed}, dim={k}")
         else:
             direction = load_direction(args.direction_path)
-            print(f"Direction loaded: shape={direction.shape}, norm={direction.norm():.4f}")
+            print(f"Direction loaded: shape={tuple(direction.shape)}")
 
         # Resolve add_layer
         add_layer = args.add_layer
@@ -482,14 +503,14 @@ def main() -> None:
     }
     if asr_ci[0] is not None:
         jbb_entry["asr_ci_95"] = list(asr_ci)
-    # LLM-judge fields (asr_llm_judge, asr_llm_judge_ci_95) are written by
-    # analysis/judge_completions.py in a separate post-hoc pass that uses
-    # the unmodified base model as the judge for every method.
+    # Judge fields (asr_llm_judge, asr_llm_judge_ci_95) are written by
+    # analysis/judge_completions.py in a separate post-hoc Qwen3Guard pass.
 
     entry: dict = {
         "model_path": entry_model_path,
         "direction_path": str(args.direction_path) if args.direction_path else (
-            f"random:seed={args.seed}" if args.random_direction else None
+            f"random:seed={args.seed}:dim={args.random_subspace_dim}"
+            if args.random_direction else None
         ),
         "jailbreakbench": jbb_entry,
     }

@@ -38,7 +38,7 @@ fi
 MODEL_ID="${MODEL_PATH##*/}"
 DIM_DIR_PT="$CODE_DIR/methods/dim/pipeline/runs/$MODEL_ID/direction.pt"
 RCO_PT="$CODE_DIR/results/geometry_repind/rco_direction.pt"
-ACTSVD_OUT="${ACTSVD_OUT:-$CODE_DIR/results/actsvd/out}"
+ACTSVD_OUT="${ACTSVD_OUT:-$CODE_DIR/methods/actsvd/out}"
 ACTSVD_DIRECTION_PT="$CODE_DIR/results/actsvd/activation_direction.pt"
 ACTSVD_N_SAMPLES="${ACTSVD_N_SAMPLES:-64}"
 

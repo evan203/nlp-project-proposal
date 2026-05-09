@@ -72,8 +72,11 @@ def main() -> None:
     present_types = _ordered_tactics(results)
     colors = _color_map(present_types)
 
-    # Discover which direction projections are available (proj_DIM, proj_RCO, ...)
-    proj_keys = sorted({k for r in results for k in r if k.startswith("proj_")})
+    # Discover which direction projections are available. Headline projections
+    # are `proj_<name>` (no `_basis_<j>` suffix); per-basis breakouts are saved
+    # in the JSON but kept off the main figures to avoid clutter.
+    all_proj_keys = {k for r in results for k in r if k.startswith("proj_")}
+    proj_keys = sorted(k for k in all_proj_keys if "_basis_" not in k)
 
     rng = np.random.default_rng(0)
 
@@ -210,9 +213,10 @@ def main() -> None:
             for d, r_, m in zip(dim_ps, rco_ps, markers):
                 ax.scatter([d], [r_], color=colors[atype], marker=m, s=40, alpha=0.6)
             ax.scatter([], [], color=colors[atype], label=_label(atype), s=40)
-        ax.set_xlabel("DIM direction projection  (utility MSO = 0.078)")
-        ax.set_ylabel("RCO direction projection  (utility MSO = 0.004)")
-        ax.set_title("DIM vs RCO projection per prompt\n(○ = jailbroken, × = refused)")
+        ax.set_xlabel("DIM direction projection (signed scalar)")
+        ax.set_ylabel("RCO subspace projection ‖B^T act‖₂ (positive)")
+        ax.set_title("DIM vs RCO projection per prompt\n"
+                     "(○ = jailbroken, × = refused; RCO is the L2 norm into the cone subspace)")
         ax.axhline(0, color="gray", linewidth=0.6, linestyle="--", alpha=0.4)
         ax.axvline(0, color="gray", linewidth=0.6, linestyle="--", alpha=0.4)
         ax.legend(fontsize=7, loc="upper left")
@@ -284,32 +288,54 @@ def main() -> None:
         print(f"  (skipping layer-sweep figure; no {sweep_path.name})")
 
     # -----------------------------------------------------------------------
-    # Figure 7: Ablation cross-test — base ASR vs DIM-ablated ASR per group
+    # Figure 7: Ablation cross-test — base ASR vs each method's ablated ASR.
+    # If both DIM and RCO ablations are present, draw paired bars per group.
     # -----------------------------------------------------------------------
-    if any("ablated_is_jailbreak" in r for r in results):
-        fig, ax = plt.subplots(figsize=(8, 4.5))
+    method_names = sorted({
+        k.replace("ablated_is_jailbreak_", "")
+        for r in results
+        for k in r
+        if k.startswith("ablated_is_jailbreak_")
+    })
+    has_legacy = any("ablated_is_jailbreak" in r and not any(
+        k.startswith("ablated_is_jailbreak_") for k in r
+    ) for r in results)
+    if not method_names and has_legacy:
+        method_names = ["Ablated"]
+
+    if method_names:
+        fig, ax = plt.subplots(figsize=(max(8, 1.5 * (1 + len(method_names)) * len(present_types)), 4.8))
         x = np.arange(len(present_types))
         bar_labels = [_label(a) for a in present_types]
         bar_colors = [colors[a] for a in present_types]
 
         base_asr = []
-        abl_asr = []
+        per_method_asr: dict[str, list[float]] = {m: [] for m in method_names}
         for a in present_types:
             entries = [r for r in results if r["attack_type"] == a]
             n = max(len(entries), 1)
             base_asr.append(sum(r["is_jailbreak"] for r in entries) / n)
-            abl_asr.append(sum(r.get("ablated_is_jailbreak", 0) for r in entries) / n)
+            for m in method_names:
+                key = f"ablated_is_jailbreak_{m}" if m != "Ablated" else "ablated_is_jailbreak"
+                per_method_asr[m].append(
+                    sum(r.get(key, 0) for r in entries) / n
+                )
 
-        w = 0.4
-        ax.bar(x - w / 2, base_asr, width=w, color=bar_colors, alpha=0.6,
+        n_bars = 1 + len(method_names)
+        w = 0.8 / n_bars
+        offsets = (np.arange(n_bars) - (n_bars - 1) / 2) * w
+        ax.bar(x + offsets[0], base_asr, width=w, color=bar_colors, alpha=0.45,
                edgecolor="white", label="Base model")
-        ax.bar(x + w / 2, abl_asr, width=w, color=bar_colors, alpha=0.95,
-               edgecolor="white", label="DIM-ablated")
+        alphas = np.linspace(0.95, 0.7, len(method_names))
+        for j, m in enumerate(method_names):
+            ax.bar(x + offsets[j + 1], per_method_asr[m], width=w,
+                   color=bar_colors, alpha=float(alphas[j]),
+                   edgecolor="white", label=f"{m}-ablated")
         ax.set_xticks(x); ax.set_xticklabels(bar_labels, rotation=22, ha="right", fontsize=8)
         ax.set_ylabel("ASR")
         ax.set_ylim(0, 1.05)
-        ax.set_title("Probe × ablation cross-test:\n"
-                     "for the same prompts, does DIM ablation help where prompt attacks fail?")
+        title_methods = " + ".join(method_names) if method_names else "Ablated"
+        ax.set_title(f"Probe × ablation cross-test: same prompts under base vs {title_methods}")
         ax.legend(fontsize=8, loc="best")
         fig.tight_layout()
         _save(fig, args.output_dir / "ablation_cross_test.png")

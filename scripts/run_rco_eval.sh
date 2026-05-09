@@ -4,7 +4,7 @@ set -euo pipefail
 # Run RCO training on Llama-3.1-8B-Instruct, then evaluate the trained direction
 # on JailbreakBench and harmless compliance and add results to benchmark_results.json.
 #
-# This is the full pipeline for the third method (RCO/RDO from the Geometry paper):
+# This is the full pipeline for the third method (RCO from Wollschlaeger et al.):
 #   1. Train the direction with rdo.py (offline wandb, local artifacts)
 #   2. Extract the direction to a standalone .pt file
 #   3. Evaluate it with eval_direction_benchmark.py
@@ -13,23 +13,23 @@ set -euo pipefail
 #
 # Environment overrides:
 #   MODEL            Model id. Defaults to meta-llama/Llama-3.1-8B-Instruct.
-#   MODE             direction, independent, orthogonal, or cone. Defaults to direction.
-#   CONE_DIM         Cone dimension (only used when MODE=cone). Defaults to 1.
+#   MODE             direction, independent, orthogonal, or cone. Defaults to cone.
+#   CONE_DIM         Cone dimension (only used when MODE=cone). Defaults to 2.
 #   PYTHON_RUNNER    Command used to run Python.
 #   HF_HOME          Hugging Face cache directory.
 #   SKIP_TRAIN       Set to 1 to skip training (use existing local vectors).
 #   SKIP_EVAL        Set to 1 to skip benchmark evaluation.
 #   SKIP_REPIND      Set to 1 to skip RepInd comparison after RCO.
 #   SAVE_MODIFIED    Set to 1 to also save a weight-edited modified model.
-#   METHOD_NAME      Name used in benchmark_results.json. Defaults to RDO.
+#   METHOD_NAME      Name used in benchmark_results.json. Defaults to RCO-Cone-2.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CODE_DIR="$ROOT_DIR/code"
 
 MODEL="${MODEL:-meta-llama/Llama-3.1-8B-Instruct}"
-MODE="${MODE:-direction}"
-CONE_DIM="${CONE_DIM:-1}"
-METHOD_NAME="${METHOD_NAME:-RDO}"
+MODE="${MODE:-cone}"
+CONE_DIM="${CONE_DIM:-2}"
+METHOD_NAME="${METHOD_NAME:-RCO-Cone-2}"
 HF_HOME="${HF_HOME:-$CODE_DIR/llm_weights}"
 TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-$HF_HOME}"
 WANDB_MODE="${WANDB_MODE:-offline}"
@@ -60,7 +60,7 @@ echo ""
 
 # ---- Step 1: Train --------------------------------------------------------
 if [[ "${SKIP_TRAIN:-0}" != "1" ]]; then
-  echo "[1/4] Training RCO/RDO direction ..."
+  echo "[1/4] Training RCO direction ..."
   MODEL="$MODEL" MODE="$MODE" CONE_DIM="$CONE_DIM" WANDB_MODE="$WANDB_MODE" \
     "$ROOT_DIR/scripts/run_rco.sh"
 else
@@ -90,10 +90,9 @@ echo "  Direction saved to: $DIRECTION_PT"
 if [[ "${SKIP_EVAL:-0}" != "1" ]]; then
   echo "[3/4] Evaluating direction on JailbreakBench and harmless compliance ..."
   cd "$CODE_DIR"
-  # NOTE: --llm_judge intentionally NOT passed here. The post-hoc
-  # analysis/judge_completions.py grades all methods with the unmodified
-  # base model in a single pass, avoiding the cross-method confound where
-  # a method's own intervention biases its self-judgment.
+  # The Qwen3Guard judge runs later in analysis/judge_completions.py, after
+  # all methods have saved completions. Keeping judging post-hoc gives every
+  # method the same external moderator.
   $PYTHON_RUNNER analysis/eval_direction_benchmark.py \
     --model_path "$MODEL" \
     --direction_path "$DIRECTION_PT" \

@@ -51,6 +51,12 @@ def plot_per_layer(results: dict, ranks: list[int], output_dir: Path, primary_ra
         if rank_key not in nd:
             continue
         color = _nd_colors[idx % len(_nd_colors)]
+        kind = nd.get("kind", nd.get(rank_key, {}).get("kind", "single"))
+        kind_tag = {
+            "subspace": "subspace MSO",
+            "per_layer": "per-layer dir.",
+            "single": "single dir.",
+        }.get(kind, "single dir.")
         ax.plot(
             layers,
             np.array(nd[rank_key]["mso"]),
@@ -58,7 +64,7 @@ def plot_per_layer(results: dict, ranks: list[int], output_dir: Path, primary_ra
             markersize=3,
             linewidth=1.4,
             color=color,
-            label=f"{name} (k={primary_rank})",
+            label=f"{name} ({kind_tag}, k={primary_rank})",
         )
 
     ax.set_xlabel("Transformer layer")

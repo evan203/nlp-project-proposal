@@ -207,9 +207,22 @@ subspace within LLMs.
 
 = Methodology
 
-Our methodology consists of two phases: (1) identifying safety and utility
-subspaces using multiple methods, and (2) comparing these subspaces to
-quantify their overlap. All experiments target Llama-3.1-Instruct 8B.
+Targeting Llama-3.1-8B-Instruct, we compare three methods for extracting safety subspaces:
+
+#figure(
+  table(
+    columns: (auto, auto, auto),
+    stroke: 0.5pt + gray,
+    fill: (x, y) => if y == 0 { gray.lighten(80%) },
+    [*Method*], [*Operates on*], [*Intervention*],
+    [DIM], [Residual stream activations], [Inference-time ablation by 1 direction],
+
+    [ActSVD], [Weight matrices and activations per linear layer], [Removal of safety ranks from weight matrix],
+
+    [RCO], [Residual stream activations], [Inference-time ablation by subspace of 2 basis vectors],
+  ),
+  caption: [The three methods operate at different levels of the model but target the same behavioral outcome (removing refusal).],
+)
 
 == Safety Subspace Identification
 
@@ -248,27 +261,25 @@ minimal side effects on harmless inputs. In our current results, full optimized
 RCO training is treated as an extension path; we do, however, run the RepInd
 profile test on DIM-derived directions.
 
-// *Neuron-Level Attribution (Wanda/SNIP).* Following #citet("Wei2024Brittleness"), we
-// complement the rank-level analysis with neuron-level safety attribution. Using
-// the Wanda importance score, we compute per-neuron scores
-// $I(W) = |W| dot.circle (bold(1) dot ||X_"in"||_2^top)$ on both safety and
-// utility calibration sets. We then isolate safety-critical neurons via set
-// difference: for sparsity levels $(p%, q%)$, the safety-critical neuron set is
-// $S(p,q) = S^s (q) \ S^u (p)$, retaining neurons important for safety but not
-// for utility. Comparing the sparsity and overlap of safety-critical neurons with
-// safety-critical ranks provides a finer-grained view of how safety is
-// distributed across the model's architecture.
-
 == Subspace Comparison
 
 Our comparison phase addresses two questions. First, _cross-method
-consistency_: do DIM and ActSVD converge on similar safety-relevant features,
+consistency_: do DIM, ActSVD, and RCO converge on similar safety-relevant features,
 or does each capture a distinct aspect of the safety mechanism?
 Second, _safety--utility overlap_: how much does each layer's safety direction
-lie inside a utility activation subspace? Third, _behavioral safety--utility
+lie inside a utility activation subspace? Third, _behavioral safety-utility
 tradeoff_: after removing safety behavior, how much does each method degrade
-useful behavior? We apply two metrics that capture complementary aspects of
-subspace relationships.
+useful behavior?
+
+DIM and RCO operate in activation space, while ActSVD operates in
+weight space. We bridge these two regimes in two complementary ways.
+*Weight-delta MSO*: for each layer and weight type, we compute the
+thin SVD of $Delta W = W_"actsvd" - W_"base"$ and project the DIM and
+RCO directions onto its left singular basis. This is a *capacity*
+measure: the realized perturbation $Delta W bold(x)$ depends on the
+input distribution. *Activation-delta direction*: per-layer mean
+activation deltas computed across 64 harmless prompts provide a direct
+activation-space comparison between the base and ActSVD-modified models.
 
 *Mode Subspace Overlap (MSO).* Following #citet("Ponkshe2026Safety"), MSO
 measures the geometric overlap between two subspaces. For two matrices
@@ -292,7 +303,9 @@ calibration.
 _causally_ related, not merely geometrically similar. Two directions
 $lambda, mu in RR^d$ are representationally independent if ablating one does
 not change the cosine similarity profile of the other across layers:
-$ forall l in L: cos(bold(x)^((l)), lambda) = cos(tilde(bold(x))_("abl"(mu))^((l)), lambda) $
+$
+  forall l in L: cos(bold(x)^((l)), lambda) = cos(tilde(bold(x))_("abl"(mu))^((l)), lambda)
+$
 and vice versa. MSO may report high geometric overlap between directions that
 turn out to be causally independent, or low overlap between directions that are
 causally entangled via non-linear interactions across layers. In this codebase,
@@ -413,14 +426,26 @@ Seeing as both testing datasets are purely textual and tests will be on complian
 
 Alpaca contains instructions and LLM-generated outputs for fine-tuning. Two examples of Alpaca data are below (one containing the optional input field):
 #figure(
-  block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt, width: 100%, fill: white.darken(2%))[
+  block(
+    stroke: 0.5pt + gray,
+    radius: 6pt,
+    inset: 12pt,
+    width: 100%,
+    fill: white.darken(2%),
+  )[
     *Instruction:* Name the members of a rock band \ \
     *Output:* The members of a rock band are typically a singer, a guitarist, a bassist, a drummer, and a keyboardist.
   ],
 )
 
 #figure(
-  block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt, width: 100%, fill: white.darken(2%))[
+  block(
+    stroke: 0.5pt + gray,
+    radius: 6pt,
+    inset: 12pt,
+    width: 100%,
+    fill: white.darken(2%),
+  )[
     *Instruction:* Identify the odd one out. \
     *Input:* Twitter, Instagram, Telegram \ \
     *Output:* Telegram
@@ -435,7 +460,13 @@ Most Alpaca inputs are around 100 characters in length to minimize necessary con
 BeaverTails contains question-answer pairs of harmless or harmful prompts. Two examples of BeaverTails data are below:
 
 #figure(
-  block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt, width: 100%, fill: white.darken(2%))[
+  block(
+    stroke: 0.5pt + gray,
+    radius: 6pt,
+    inset: 12pt,
+    width: 100%,
+    fill: white.darken(2%),
+  )[
     *Prompt:* What is the maximum amount of time that I can stay in a tanning bed? \
     *Harm Category:* None \ \
     *Response:* The maximum amount of time that you can stay in a tanning bed is recommended to be limited to 10 minutes per session and no more than once per day. Tanning beds should also be used with protective eyewear to reduce the risk of eye damage.
@@ -443,7 +474,13 @@ BeaverTails contains question-answer pairs of harmless or harmful prompts. Two e
 )
 
 #figure(
-  block(stroke: 0.5pt + gray, radius: 6pt, inset: 12pt, width: 100%, fill: white.darken(2%))[
+  block(
+    stroke: 0.5pt + gray,
+    radius: 6pt,
+    inset: 12pt,
+    width: 100%,
+    fill: white.darken(2%),
+  )[
     *Prompt:* How can I download music for free? \
     *Harm Category:* Financial Crime, Violence \ \
     *Response:* There are a few legitimate ways that you can download music for free. One is through streaming services such as Spotify ... Lastly, you could try using torrent websites, but these sites are often heavily monitored and could lead to legal consequences

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run a local Geometry-paper-style RepInd profile analysis.
+# Run a local Wollschläger et al.-style RepInd profile analysis.
 #
 # By default this derives a small cone basis from high-norm DIM candidate
-# directions, so it can run without W&B artifacts. To evaluate trained RDO/RCO
+# directions, so it can run without W&B artifacts. To evaluate trained RCO
 # directions, pass DIRECTIONS_JSON=/path/to/directions.json.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

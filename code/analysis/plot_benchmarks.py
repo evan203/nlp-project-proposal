@@ -18,7 +18,14 @@ RESULTS = OUT_DIR / "benchmark_results.json"
 
 # Base is always first; remaining methods are appended in insertion order.
 BASE_NAME = "Base (Llama-3.1-8B-Instruct)"
-PREFERRED_ORDER = ["Base (Llama-3.1-8B-Instruct)", "DIM-Ablated", "ActSVD-Modified"]
+PREFERRED_ORDER = [
+    "Base (Llama-3.1-8B-Instruct)",
+    "DIM-Ablated",
+    "ActSVD-Modified",
+    "RCO-Cone-2",
+    "Random-Direction-7-1D",
+    "Random-Subspace-7-2D",
+]
 # Extended palette — first three match original colors, rest use matplotlib tab10.
 _FIXED_COLORS = ["#4c78a8", "#f58518", "#54a24b"]
 _EXTRA_COLORS = plt.get_cmap("tab10").colors  # type: ignore[attr-defined]
@@ -108,10 +115,10 @@ def plot_jailbreak_asr_with_judges(data: dict, names, labels, colors) -> None:
     ax.bar(x - w / 2, sub_vals, w, color=colors, alpha=0.55, edgecolor="white",
            label="Substring judge")
     ax.bar(x + w / 2, llm_vals, w, color=colors, alpha=0.95, edgecolor="white",
-           label="LLM judge (base model)")
+           label="Qwen3Guard judge")
     ax.set_xticks(x); ax.set_xticklabels(labels, rotation=15, ha="right", fontsize=8)
     ax.set_ylim(0, 1.08); ax.set_ylabel("ASR")
-    ax.set_title("JBB ASR — substring vs LLM judge")
+    ax.set_title("JBB ASR — substring vs Qwen3Guard")
     ax.legend(fontsize=8)
     fig.tight_layout()
     fig.savefig(OUT_DIR / "jailbreak_asr_judges.png", dpi=180)
