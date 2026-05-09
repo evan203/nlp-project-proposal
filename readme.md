@@ -257,7 +257,10 @@ Expected outputs:
 | RepInd heatmap | `scripts/run_geometry_repind.sh` or the RepInd step inside `scripts/run_rco_eval.sh` | `code/results/geometry_repind_rco/geometry_repind_results.json`, `repind_change_heatmap.png` |
 | Prompt-attack probe | `scripts/run_probe_attack_types.sh` | `code/results/probe_attack_types/results.json`, probe figure PNGs |
 
-### 4. Figures and Report
+### 4. Activation Comaprison
+To run the activation comparison experiment, use `notebooks/activation_comparison.ipynb`.
+
+### 5. Figures and Report
 
 For a fresh local run, sync generated plots into the report figure directory:
 
