@@ -11,7 +11,7 @@ independence test from Wollschläger et al.:
 
 If no external direction JSON is supplied, the script derives a small local
 "cone basis" from high-norm DIM candidate directions so the analysis can run
-without W&B artifacts. When trained RDO/RCO/RepInd vectors are available, pass
+without W&B artifacts. When trained RCO/RepInd vectors are available, pass
 them with --directions_json and the same code evaluates those directions.
 """
 

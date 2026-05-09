@@ -23,8 +23,9 @@ whether they identify the same underlying refusal mechanism.
 
 ## Current Report Results
 
-The active report is `docs/claude_report.typ`, with the compiled PDF mirrored
-at `report.pdf`. The report reads figure files from `docs/figures/`.
+The shared final-report integration target is `docs/report.typ`, with the
+compiled PDF mirrored at `report.pdf`. The results section was transferred from
+`docs/claude_report.typ`. Both reports read figure files from `docs/figures/`.
 
 | Model variant | Substring ASR | Qwen3Guard ASR | Harmless compliance | Pile PPL | Alpaca PPL |
 |---|---:|---:|---:|---:|---:|
@@ -80,6 +81,7 @@ scripts/
   run_actsvd.sh              Run ActSVD pipeline (r^u=3950, r^s=4090 by default).
   run_rco.sh                 Run RCO/RDO training backend.
   run_rco_eval.sh            Train RCO, extract direction, benchmark, and run RepInd.
+  run_behavioral_benchmark.sh  Reproduce the full behavioral benchmark table.
   run_safety_utility_overlap.sh  Run safety-vs-utility overlap analysis.
   run_method_overlap.sh      Run DIM/RCO-vs-ActSVD weight-delta MSO.
   run_geometry_repind.sh     Run RepInd profile analysis.
@@ -90,7 +92,7 @@ scripts/
   inventory.py               Report local model artifacts.
 
 notebooks/
-  colab_end_to_end.ipynb     Convenience driver only; not a final submission artifact.
+  colab_end_to_end.ipynb     Guided Colab workflow for reproducing the experiments.
 ```
 
 ## Setup
@@ -111,7 +113,19 @@ The scripts default `HF_HOME` to `code/llm_weights`, so downloads stay
 in-project. The full Llama-3.1-8B-Instruct workflow expects an A100-class GPU;
 ActSVD can require an A100 80 GB runtime depending on environment settings.
 
-## Reproducing the Workflow Without the Notebook
+## Guided Colab Workflow
+
+The recommended reproduction path is `notebooks/colab_end_to_end.ipynb`. Open it
+in Google Colab, select an A100 GPU runtime, authenticate Hugging Face, and run
+the cells in order. The notebook runs the same scripts documented below and
+packages the resulting JSON files, figures, and direction tensors into
+`colab_results.zip`.
+
+The notebook writes report-facing figures to `docs/figures/` and lightweight
+artifacts to `code/results/`. Modified model weights are not included in the
+zip because they are too large for direct notebook download.
+
+## Script Workflow
 
 Run commands from the repository root unless noted otherwise. Each script honors
 `PYTHON_RUNNER`; if unset, scripts prefer `uv run python` when `uv` is available
@@ -139,14 +153,26 @@ RCO 2-D cone:
 MODE=cone CONE_DIM=2 METHOD_NAME=RCO-Cone-2 scripts/run_rco_eval.sh
 ```
 
-`run_rco_eval.sh` trains the cone, extracts the latest 2-D basis to
+`run_rco_eval.sh` trains the cone, extracts the trained 2-D basis to
 `code/results/geometry_repind/rco_direction.pt`, evaluates RCO on the benchmark,
 and runs the DIM-vs-RCO RepInd comparison.
 
 ### 2. Behavioral Benchmark
 
-Use `code/analysis/eval_direction_benchmark.py` for base, DIM, ActSVD, and
-random baselines. These are the report settings:
+After the DIM, ActSVD, and optional RCO artifacts exist, reproduce the full
+behavioral benchmark table with:
+
+```bash
+scripts/run_behavioral_benchmark.sh
+```
+
+This evaluates the base model, DIM, ActSVD, RCO when
+`code/results/geometry_repind/rco_direction.pt` exists, both random baselines,
+the post-hoc Qwen3Guard judge, and benchmark plots. The main output is
+`code/results/benchmark/benchmark_results.json`.
+
+The wrapper is equivalent to the explicit commands below. They are kept here so
+each reported row can be rerun independently if needed:
 
 ```bash
 cd code
@@ -221,6 +247,16 @@ These run, respectively:
 
 The prompt probe streams WildJailbreak and requires `HF_TOKEN`.
 
+Expected outputs:
+
+| Report item | Command | Main output |
+|---|---|---|
+| Behavioral benchmark table and tradeoff plot | `scripts/run_behavioral_benchmark.sh` | `code/results/benchmark/benchmark_results.json`, `code/results/benchmark/*.png` |
+| Figure 2 cross-method MSO | `scripts/run_method_overlap.sh` | `code/results/method_overlap/comparison_results.json`, `code/results/method_overlap/mso_per_layer.png` |
+| Safety-utility overlap table/figure | `scripts/run_safety_utility_overlap.sh` | `code/results/safety_utility_overlap/safety_utility_overlap_results.json`, `safety_utility_overlap_per_layer.png` |
+| RepInd heatmap | `scripts/run_geometry_repind.sh` or the RepInd step inside `scripts/run_rco_eval.sh` | `code/results/geometry_repind_rco/geometry_repind_results.json`, `repind_change_heatmap.png` |
+| Prompt-attack probe | `scripts/run_probe_attack_types.sh` | `code/results/probe_attack_types/results.json`, probe figure PNGs |
+
 ### 4. Figures and Report
 
 For a fresh local run, sync generated plots into the report figure directory:
@@ -233,7 +269,13 @@ For this final submission, `docs/figures/` has already been prepared from
 `colab_results_v3/`. The report uses only `docs/figures/*`, not
 `code/results/*`.
 
-Compile the report:
+Compile the shared final report:
+
+```bash
+typst compile --root . docs/report.typ report.pdf
+```
+
+Compile the standalone results source:
 
 ```bash
 cd docs
@@ -256,6 +298,17 @@ compiles successfully with fallback fonts.
 
 ```bash
 python scripts/inventory.py
+```
+
+## Lightweight Validation
+
+These checks do not run the expensive model experiments, but they catch syntax,
+import, shell, and Typst errors in the submitted code paths:
+
+```bash
+bash -n scripts/*.sh
+python -m compileall -q code/analysis scripts code/tools
+typst compile --root . docs/report.typ /tmp/report-check.pdf
 ```
 
 ## Reference Papers
