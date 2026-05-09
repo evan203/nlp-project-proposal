@@ -223,46 +223,9 @@ Targeting Llama-3.1-8B-Instruct, we compare three methods for extracting safety 
   caption: [The three methods operate at different levels of the model but target the same behavioral outcome (removing refusal).],
 )
 
-// == Safety Subspace Identification
-//
-// We implement three complementary methods for extracting safety-relevant
-// subspaces from the model's internal representations.
-//
-// *Difference-in-Means (DIM).* Following #citet("arditi2024"), we compute the mean
-// residual stream activations at each layer $l$ and post-instruction token
-// position $i$ for sets of harmful and harmless prompts. The difference-in-means
-// vector is $bold(r)_i^((l)) = bold(mu)_i^((l)) - bold(v)_i^((l))$, where
-// $bold(mu)$ and $bold(v)$ are the mean activations over harmful and harmless
-// prompts, respectively. We select the single most effective vector $hat(bold(r))$
-// by evaluating each candidate's ability to bypass refusal when ablated and to
-// induce refusal when added. The selected unit-norm vector defines a
-// one-dimensional safety subspace.
-//
-// *ActSVD Safety and Utility Ranks.* Following #citet("Wei2024Brittleness"), we perform
-// Singular Value Decomposition on the product of model weights and input
-// activations $W X_"in"$ for both safety and utility calibration datasets,
-// yielding $U S V^top approx W X_"in"$. The orthogonal projection matrices
-// $Pi^s = U^s (U^s)^top$ and $Pi^u = U^u (U^u)^top$ project onto the top $r^s$
-// safety and top $r^u$ utility rank subspaces, respectively. To disentangle
-// safety from utility, we compute the isolated safety projection:
-// $Delta W(r^u, r^s) = (I - Pi^u) Pi^s W$. While Wei et al. evaluate on
-// Llama-2 7B/13B, the method operates on generic linear layers and transfers
-// directly to Llama-3.1 8B.
-//
-// *Refusal Cone Optimization (RCO).* Following #citet("pmlr-v267-wollschlager25a"), the
-// Geometry codebase can use gradient-based optimization to discover multiple
-// refusal directions that together form a multi-dimensional conic region. The
-// optimization minimizes a composite loss encoding two properties: (1) monotonic
-// scaling of refusal probability with the magnitude of activation addition, and
-// (2) surgical ablation that bypasses refusal on harmful prompts while preserving
-// behavior on harmless prompts. A retain loss based on KL divergence ensures
-// minimal side effects on harmless inputs. In our current results, full optimized
-// RCO training is treated as an extension path; we do, however, run the RepInd
-// profile test on DIM-derived directions.
-
 == Subspace Comparison
 
-Our comparison phase addresses two questions. First, _cross-method
+Our comparison phase addresses three questions. First, _cross-method
 consistency_: do DIM, ActSVD, and RCO converge on similar safety-relevant features,
 or does each capture a distinct aspect of the safety mechanism?
 Second, _safety--utility overlap_: how much does each layer's safety direction
