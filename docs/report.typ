@@ -378,6 +378,96 @@ run, not as a completed cone-optimization claim.
   caption: [RepInd profile-change matrix for DIM and two DIM-derived cone-basis candidates. Rows are ablated directions; columns are measured directions. Lower off-diagonal values indicate greater representational independence.],
 ) <repind_heatmap>
 
+
+
+
+
+
+
+= Direct Activation Comparison
+This section describes our methodology for comparison and analysis of the hidden layer activations
+produced by ActSVD and DIM jailbroken models. We compared the activations of these jailbroken model
+both with each other, and with the base model which, consistent with our other experiments, is *LLaMA 3.1 8B Instruct*.
+We compare the activations using both cosine similarity and euclidean distance in order to understand the changes
+in both direction and magnitude.
+
+== Experimental Settings
+ 
+=== Datasets
+ 
+*Harmful Prompts:* We use the AdvBench dataset, a standard benchmark in the LLM safety literature
+consisting of adversarial instructions designed to elicit harmful behavior. We
+sample 30 prompts from this dataset.
+ 
+*Helpful Prompts:* We use the Alpaca Cleaned dataset, a curated instruction-following dataset
+filtered to remove safety-relevant content (the `alpaca_cleaned_no_safety_train.csv` split). The
+`instruction` column is used as the prompt source. Prompts shorter than 10 characters and
+duplicates are filtered out. We sample the first 30 qualifying prompts.
+ 
+Both datasets are balanced at 30 prompts per class, yielding 60 total prompts evaluated across
+all three models.
+ 
+=== Models
+ 
+All models are variants of *LLaMA 3.1 8B Instruct* (`meta-llama/Llama-3.1-8B-Instruct`), sharing
+the same base architecture (32 transformer layers, hidden dimension of 4096).
+ 
+- *Base Model:* The unmodified instruction-tuned checkpoint, used as the representational baseline.
+- *ActSVD:* A modified checkpoint in which safety-relevant components are identified and suppressed
+  via Singular Value Decomposition applied to the model's weight matrices or activations.
+- *Diff-in-Means (DIM):* A modified checkpoint produced by computing the difference between mean
+  harmful and mean helpful hidden representations and subtracting a scaled version of this
+  direction from the model's weight matrices, steering the model away from harmful activation
+  patterns.
+ 
+=== Hyperparameters
+ 
+All models are loaded in `bfloat16` precision to reduce GPU memory consumption. Activations are extracted
+from the residual stream between each layer.
+ 
+=== Preprocessing
+ 
+Input prompts are formatted using the LLaMA 3 chat template via `apply_chat_template`, wrapping
+each instruction in the `[role: user]` structure expected by the instruction-tuned model.
+Residual formatting artifacts from prior datasets (e.g., `[INST]` and `[/INST]` tags from LLaMA
+2-era formatting) are stripped via regex before template application.
+
+#figure(
+  image("figures/DIM_ActSVD_act_comp.png", width: 100%),
+  caption: [Cosine similarity and Euclidean distance between ActSVD and DIM jailbroken model activations],
+) <DIM_ActSVD_act_comp>
+
+#figure(
+  image("figures/Base_act_comp.png", width: 100%),
+  caption: [Cosine similarity and Euclidean distance between ActSVD and DIM jailbroken model activations and the Base model.
+Note the different Y axis scaling between the graphs],
+) <Base_act_comp>
+
+=== Layer-wise Activation Divergence: ActSVD vs. Diff-in-Means
+
+The first comparison examines how the two editing methods differ from each other across all 33
+layers (embedding layer + 32 transformer blocks). In both cosine similarity and Euclidean
+distance, we observe that the two modified models produce clearly different internal
+representations. Harmful prompts are slightly more different than helpful, but not by a large margin.
+These findings are counter to what we would expect if these methods are truly only affecting safety, which
+would imply that each model would act similarly to the base model when prompted on helpful prompts.
+ 
+=== Layer-wise Activation Divergence: Base vs. Modified Models
+ 
+In the second set of comparisons (Base vs. ActSVD and Base vs. DIM), we see that ActSVD
+changes the base model much more than DIM, especially for helpful prompts. If a method is only
+affecting a safety subspace, we would expect the Base and the modified model to be very similar
+on helpful prompts while being different on Harmful prompts.
+
+For ActSVD, this is not the case at all. We see that both harmful and helpful prompts are significantly
+affected by the modification, indicating it is also affecting utility along with safety.
+
+For DIM, helpful prompts _are_ affected much less than harmful ones, but they are still
+significantly affected again indicating it is also affecting utility along with safety.
+
+
+
+
 = Data Sets
 
 We plan to use two primary datasets to conduct testing. Alpaca #cite("alpaca")
