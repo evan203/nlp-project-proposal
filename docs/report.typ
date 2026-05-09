@@ -47,8 +47,7 @@
   We reproduce
   Difference-in-Means (DIM), ActSVD, and RCO on Llama-3.1-8B-Instruct
   and compare them at the behavioral, geometric, and causal levels.
-  We extend the adversarial-suffix probe of
-  DIM from a single GCG suffix on Qwen 1.8B to
+  We extend the adversarial-suffix probe of DIM from a single GCG suffix on Qwen 1.8B to
   WildJailbreak wrappers on Llama-3.1-8B, adding a per-method ablation
   cross-test in which RCO ablation strictly outperforms DIM on bare
   harmful requests. A benign-wrapped control shows that wrapper style
@@ -591,21 +590,21 @@ However, if the DIM process truly identifies a single universal safety vector fo
 The reference dataset identifies the vector at layer 11 as the safety vector, and the graph above shows that the cosine similarity at layer 11 is 0.7126. This is not perfect agreement but fairly close.
 The highest agreement is at layer 12 with a cosine similarity of 0.7303.
 
-=== Layer-wise Activation Divergence: ActSVD vs. Diff-in-Means
+== Layer-wise Activation Divergence: ActSVD vs. Diff-in-Means
 
 #figure(
   image("figures/DIM_ActSVD_act_comp.png", width: 100%),
   caption: [Cosine similarity and Euclidean distance between ActSVD and DIM jailbroken model activations],
 ) <DIM_ActSVD_act_comp>
 
-The first comparison examines how the two editing methods differ from each other across all 33
+This comparison examines how the two editing methods differ from each other across all 33
 layers (embedding layer + 32 transformer blocks). In both cosine similarity and Euclidean
 distance, we observe that the two modified models produce clearly different internal
 representations. Harmful prompts are slightly more different than helpful, but not by a large margin.
 These findings are counter to what we would expect if these methods are truly only affecting safety, which
 would imply that each model would act similarly to the base model when prompted on helpful prompts.
 
-=== Layer-wise Activation Divergence: Base vs. Modified Models
+== Layer-wise Activation Divergence: Base vs. Modified Models
 
 #figure(
   image("figures/Base_act_comp.png", width: 100%),
@@ -646,7 +645,12 @@ Our work has some limitations.
 
 - *Only one model family:* All of our experiments use Llama-3.1-8B-Instruct. Our results may not generalize to other families of models such as Qwen or Deepseek.
 - *Only one model size*: We used an 8B parameter model for all our experiments. It may be the case that larger models have more deeply intertwined safety subspaces.
-
+- *PCA utility $eq.not$ causal utility.* The utility subspace is
+  defined by variance, not causal contribution; low MSO does not
+  prove low utility damage. Behavioral perplexity is the definitive test.
+- *RepInd uses the RCO cone basis as the second pair of candidates*,
+  not independent vectors from RepInd's own loss; the asymmetry is
+  evidence about the cone vs.~DIM, not a fully general independence test.
 
 = Conclusion
 
@@ -658,12 +662,21 @@ This shows that while safety may be distributed throughout multiple subspaces, t
 
 All five authors contributed to writing and research-design discussion.
 Effort (totaling 100%):
-*Evan Scamehorn (20%)* --- DIM/ActSVD Colab pipelines and behavioral benchmark, planning and git maintenance.\
-*Adam Venton (20%)* --- safety-utility overlap, activation comparison experiment.\
-*Calvin Kosmatka (20%)* --- literature survey, self-consistency experiment for DIM.\
-*Kyle Sha (20%)* --- prompt-attack probe (incl.\ layer sweep + ablation
-cross-test), WildJailbreak integration, Discussion.\
-*Zeke Mackay (20%)* --- RepInd analysis, RCO training, asymmetry interpretation, writing of data analysis in report.\
+
+== Evan Scamehorn (20%)
+Integrated reference paper methodology implementations. Led project planning and git maintenance.
+
+== Adam Venton (20%)
+Implemented activation comparison experiment. Wrote experiment analysis
+
+== Calvin Kosmatka (20%)
+Conducted literature survey. Implemented and analyzed self-consistency experiment for DIM.
+
+== Kyle Sha (20%)
+Implemented Jupyter notebooks and pipeline scripts. Implemented and analyzed prompt-attack probe (incl. layer sweep + ablation cross-test) and WildJailbreak. Wrote discussion.
+
+== Zeke Mackay (20%)
+Wrote RepInd analysis, conducted RCO training, and wrote asymmetry interpretation. Conducted dataset analysis.
 
 #pagebreak()
 
