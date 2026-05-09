@@ -56,7 +56,7 @@
 
 = Introduction
 
-== A Contradiction in the Literature
+== Literature Survey
 
 Four recent papers make conflicting claims about whether safety is separable
 from utility in aligned LLMs:
