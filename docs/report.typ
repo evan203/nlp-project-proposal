@@ -6,8 +6,9 @@
 #import "@preview/tracl:0.8.1": *
 #import "@preview/pergamon:0.7.1": *
 
-#show figure: set text(size: 0.7em)
+#show figure: set text(size: 0.6em)
 #show figure: set align(left)
+
 
 #show: doc => acl(
   doc,
@@ -39,24 +40,14 @@
 
 
 #abstract[
-  Modern Large Language Models (LLMs) undergo extensive alignment to ensure
-  they don't produce harmful outputs, while still being as helpful as possible.
-  However, these aligned models are fragile and can be jailbroken by a variety of methods. Recent research suggests
-  that this fragility may stem from compact safety mechanisms whose relationship
+  Recent research suggests LLM safety mechanisms' relationship
   to general utility remains poorly understood. Several methods have been
   proposed to isolate or remove safety-related structure, including Difference
   in Means (DIM), Refusal Cone Optimization (RCO), and ActSVD.
-  Conversely, other research suggests that it might be impossible to completely linearly
-  separate safety and utility in current LLMs. We reproduce
+  We reproduce
   Difference-in-Means (DIM), ActSVD, and RCO on Llama-3.1-8B-Instruct
   and compare them at the behavioral, geometric, and causal levels.
-  The full per-layer DIM mean-difference stack overlaps the utility PCA basis at
-  98× random (rank 8); DIM's selected 1-D direction is far less
-  entangled (40×); RCO's optimized 2-D cone is essentially orthogonal
-  to it (1.5×). Behaviorally, Qwen3Guard ASR ranks the methods
-  *RCO 0.93 > DIM 0.90 > ActSVD 0.77*, with rank-matched
-  random-direction and random-2-D-subspace baselines staying at the
-  base-model floor. We extend the adversarial-suffix probe of
+  We extend the adversarial-suffix probe of
   DIM from a single GCG suffix on Qwen 1.8B to
   WildJailbreak wrappers on Llama-3.1-8B, adding a per-method ablation
   cross-test in which RCO ablation strictly outperforms DIM on bare
@@ -70,85 +61,6 @@
 
 Four recent papers make conflicting claims about whether safety is separable
 from utility in aligned LLMs:
-
-- #citet("arditi2024") show that refusal is mediated by a _single direction_ in
-  activation space. Ablating it "surgically disables refusal with minimal effect
-  on other capabilities." Benchmark scores stay within 99% confidence intervals
-  of the original model.
-
-- #citet("Wei2024Brittleness") find that naively removing top safety-critical
-  ranks "also leads to a drastic decrease in the model's utility." They must use
-  an orthogonal projection $(I - Pi^u) Pi^s W$ to disentangle safety from
-  utility --- the need for this step is itself evidence of overlap. After
-  disentanglement, approximately 2.5% of ranks suffice to break safety while mostly
-  preserving utility.
-
-- #citet("Ponkshe2026Safety") argue that "safety is highly entangled with the
-  general learning components of the model" and that "no selective removal is
-  possible." They find that improvements in safety come "only at a proportional
-  cost to utility."
-
-- #citet("pmlr-v267-wollschlager25a") generalize refusal from a single direction
-  to multi-dimensional _concept cones_ of up to 5 dimensions. They show that
-  DIM's single-direction ablation damages TruthfulQA, while their optimized
-  directions reduce this side-effect by 40%.
-
-These claims range from clean one-dimensional separation to fundamental
-inseparability. If #citet("arditi2024") are correct, a single targeted
-defense could block safety-removal attacks. If
-#citet("Ponkshe2026Safety") are correct, safety removal inevitably
-degrades the model. These are materially different conclusions for
-alignment.
-
-== Research Questions
-
-We investigate whether these claims can be reconciled empirically by running all
-three methods on the same model and asking:
-
-+ *Cross-method agreement.* Do DIM, ActSVD, and RCO converge on the same
-  geometric structure, despite operating at different levels (activation space
-  vs.~weight space)?
-
-+ *Safety-utility entanglement.* How much does each method's safety direction
-  overlap with the model's utility activation subspace? Is the _full_ safety
-  subspace entangled even if individual _selected_ directions are not?
-
-+ *Behavioral tradeoff.* When each method removes safety, how much utility does
-  it preserve? Does geometric overlap predict behavioral utility cost?
-
-+ *Causal independence.* Are multiple refusal directions causally independent,
-  or does ablating one change the effect of another?
-
-+ *Generalizing the adversarial-suffix analysis of
-  #citet("arditi2024").* Their §5.1 shows that a single GCG-optimized
-  adversarial suffix suppresses the refusal direction at the EOI
-  position on Qwen 1.8B Chat. The analysis is explicitly restricted to
-  "a single model and a single adversarial example." We examine whether
-  the same suppression appears under in-the-wild prompt-wrapping
-  attacks, on a more recent and larger model (Llama-3.1-8B-Instruct),
-  and whether the suppression is layer-localized or distributed.
-
-== Key Insight
-
-We hypothesize that these four claims may be simultaneously correct
-because they describe different objects. The _full_ safety subspace
-(e.g., the layer-wise stack of DIM mean-difference vectors) may be
-entangled with utility, while each method's _selection procedure_
-identifies a surgical direction within that entangled space with lower
-utility overlap. DIM selects the direction with minimum KL divergence
-on harmless prompts; ActSVD explicitly orthogonalizes safety against
-utility; RCO's loss includes a retain term penalizing harmless-prompt
-disruption. All three procedures implicitly optimize for low
-safety-utility overlap, which may explain why the resulting
-interventions preserve utility despite broad entanglement.
-
-Some of the disagreement across papers may also reflect genuine differences in
-models, datasets, or evaluation protocols rather than contradictory truths about
-the same underlying phenomenon. Our controlled single-model study eliminates
-model variation as a confound but cannot fully resolve this ambiguity.
-
-
-= Literature Survey
 
 #citet("arditi2024") show that for several common chat models, a manipulation of
 a single dimensional subspace is enough to both induce refusal of non-harmful
@@ -236,6 +148,62 @@ refusal vectors is found to have higher attack success than difference-of-means
 direction ablation. This further shows that safety and utility occupy a complex
 subspace within LLMs.
 
+These claims range from clean one-dimensional separation to fundamental
+inseparability. If #citet("arditi2024") are correct, a single targeted
+defense could block safety-removal attacks. If
+#citet("Ponkshe2026Safety") are correct, safety removal inevitably
+degrades the model. These are materially different conclusions for
+alignment.
+
+== Research Questions
+
+We investigate whether these claims can be reconciled empirically by running all
+three methods on the same model and asking:
+
++ *Cross-method agreement.* Do DIM, ActSVD, and RCO converge on the same
+  geometric structure, despite operating at different levels (activation space
+  vs.~weight space)?
+
++ *Safety-utility entanglement.* How much does each method's safety direction
+  overlap with the model's utility activation subspace? Is the _full_ safety
+  subspace entangled even if individual _selected_ directions are not?
+
++ *Behavioral tradeoff.* When each method removes safety, how much utility does
+  it preserve? Does geometric overlap predict behavioral utility cost?
+
++ *Causal independence.* Are multiple refusal directions causally independent,
+  or does ablating one change the effect of another?
+
++ *Generalizing the adversarial-suffix analysis of
+  #citet("arditi2024").* Their §5.1 shows that a single GCG-optimized
+  adversarial suffix suppresses the refusal direction at the EOI
+  position on Qwen 1.8B Chat. The analysis is explicitly restricted to
+  "a single model and a single adversarial example." We examine whether
+  the same suppression appears under in-the-wild prompt-wrapping
+  attacks, on a more recent and larger model (Llama-3.1-8B-Instruct),
+  and whether the suppression is layer-localized or distributed.
+
+== Key Insight
+
+We hypothesize that these four claims may be simultaneously correct
+because they describe different objects. The _full_ safety subspace
+(e.g., the layer-wise stack of DIM mean-difference vectors) may be
+entangled with utility, while each method's _selection procedure_
+identifies a surgical direction within that entangled space with lower
+utility overlap. DIM selects the direction with minimum KL divergence
+on harmless prompts; ActSVD explicitly orthogonalizes safety against
+utility; RCO's loss includes a retain term penalizing harmless-prompt
+disruption. All three procedures implicitly optimize for low
+safety-utility overlap, which may explain why the resulting
+interventions preserve utility despite broad entanglement.
+
+Some of the disagreement across papers may also reflect genuine differences in
+models, datasets, or evaluation protocols rather than contradictory truths about
+the same underlying phenomenon. Our controlled single-model study eliminates
+model variation as a confound but cannot fully resolve this ambiguity.
+
+
+
 = Methodology
 
 Targeting Llama-3.1-8B-Instruct, we compare three methods for extracting safety subspaces:
@@ -244,6 +212,7 @@ Targeting Llama-3.1-8B-Instruct, we compare three methods for extracting safety 
   table(
     columns: (auto, auto, auto),
     stroke: 0.5pt + gray,
+    inset: 3pt,
     fill: (x, y) => if y == 0 { gray.lighten(80%) },
     [*Method*], [*Operates on*], [*Intervention*],
     [DIM], [Residual stream activations], [Inference-time ablation by 1 direction],
@@ -255,42 +224,42 @@ Targeting Llama-3.1-8B-Instruct, we compare three methods for extracting safety 
   caption: [The three methods operate at different levels of the model but target the same behavioral outcome (removing refusal).],
 )
 
-== Safety Subspace Identification
-
-We implement three complementary methods for extracting safety-relevant
-subspaces from the model's internal representations.
-
-*Difference-in-Means (DIM).* Following #citet("arditi2024"), we compute the mean
-residual stream activations at each layer $l$ and post-instruction token
-position $i$ for sets of harmful and harmless prompts. The difference-in-means
-vector is $bold(r)_i^((l)) = bold(mu)_i^((l)) - bold(v)_i^((l))$, where
-$bold(mu)$ and $bold(v)$ are the mean activations over harmful and harmless
-prompts, respectively. We select the single most effective vector $hat(bold(r))$
-by evaluating each candidate's ability to bypass refusal when ablated and to
-induce refusal when added. The selected unit-norm vector defines a
-one-dimensional safety subspace.
-
-*ActSVD Safety and Utility Ranks.* Following #citet("Wei2024Brittleness"), we perform
-Singular Value Decomposition on the product of model weights and input
-activations $W X_"in"$ for both safety and utility calibration datasets,
-yielding $U S V^top approx W X_"in"$. The orthogonal projection matrices
-$Pi^s = U^s (U^s)^top$ and $Pi^u = U^u (U^u)^top$ project onto the top $r^s$
-safety and top $r^u$ utility rank subspaces, respectively. To disentangle
-safety from utility, we compute the isolated safety projection:
-$Delta W(r^u, r^s) = (I - Pi^u) Pi^s W$. While Wei et al. evaluate on
-Llama-2 7B/13B, the method operates on generic linear layers and transfers
-directly to Llama-3.1 8B.
-
-*Refusal Cone Optimization (RCO).* Following #citet("pmlr-v267-wollschlager25a"), the
-Geometry codebase can use gradient-based optimization to discover multiple
-refusal directions that together form a multi-dimensional conic region. The
-optimization minimizes a composite loss encoding two properties: (1) monotonic
-scaling of refusal probability with the magnitude of activation addition, and
-(2) surgical ablation that bypasses refusal on harmful prompts while preserving
-behavior on harmless prompts. A retain loss based on KL divergence ensures
-minimal side effects on harmless inputs. In our current results, full optimized
-RCO training is treated as an extension path; we do, however, run the RepInd
-profile test on DIM-derived directions.
+// == Safety Subspace Identification
+//
+// We implement three complementary methods for extracting safety-relevant
+// subspaces from the model's internal representations.
+//
+// *Difference-in-Means (DIM).* Following #citet("arditi2024"), we compute the mean
+// residual stream activations at each layer $l$ and post-instruction token
+// position $i$ for sets of harmful and harmless prompts. The difference-in-means
+// vector is $bold(r)_i^((l)) = bold(mu)_i^((l)) - bold(v)_i^((l))$, where
+// $bold(mu)$ and $bold(v)$ are the mean activations over harmful and harmless
+// prompts, respectively. We select the single most effective vector $hat(bold(r))$
+// by evaluating each candidate's ability to bypass refusal when ablated and to
+// induce refusal when added. The selected unit-norm vector defines a
+// one-dimensional safety subspace.
+//
+// *ActSVD Safety and Utility Ranks.* Following #citet("Wei2024Brittleness"), we perform
+// Singular Value Decomposition on the product of model weights and input
+// activations $W X_"in"$ for both safety and utility calibration datasets,
+// yielding $U S V^top approx W X_"in"$. The orthogonal projection matrices
+// $Pi^s = U^s (U^s)^top$ and $Pi^u = U^u (U^u)^top$ project onto the top $r^s$
+// safety and top $r^u$ utility rank subspaces, respectively. To disentangle
+// safety from utility, we compute the isolated safety projection:
+// $Delta W(r^u, r^s) = (I - Pi^u) Pi^s W$. While Wei et al. evaluate on
+// Llama-2 7B/13B, the method operates on generic linear layers and transfers
+// directly to Llama-3.1 8B.
+//
+// *Refusal Cone Optimization (RCO).* Following #citet("pmlr-v267-wollschlager25a"), the
+// Geometry codebase can use gradient-based optimization to discover multiple
+// refusal directions that together form a multi-dimensional conic region. The
+// optimization minimizes a composite loss encoding two properties: (1) monotonic
+// scaling of refusal probability with the magnitude of activation addition, and
+// (2) surgical ablation that bypasses refusal on harmful prompts while preserving
+// behavior on harmless prompts. A retain loss based on KL divergence ensures
+// minimal side effects on harmless inputs. In our current results, full optimized
+// RCO training is treated as an extension path; we do, however, run the RepInd
+// profile test on DIM-derived directions.
 
 == Subspace Comparison
 
@@ -347,13 +316,6 @@ and after ablating another direction. Without completed optimized RCO artifacts,
 we derive a small cone-like basis from high-norm DIM mean-difference candidates;
 with trained RCO artifacts, the same script can compare DIM, RDO, RepInd, and
 cone basis vectors directly.
-
-== Direct Activation Comparison
-This section describes our methodology for comparison and analysis of the hidden layer activations
-produced by ActSVD and DIM jailbroken models. We compared the activations of these jailbroken model
-both with each other, and with the base model which, consistent with our other experiments, is *LLaMA 3.1 8B Instruct*.
-We compare the activations using both cosine similarity and euclidean distance in order to understand the changes
-in both direction and magnitude.
 
 = Experimental Settings
 
@@ -501,7 +463,7 @@ optimum.
   placement: top,
   table(
     columns: (2.5fr, 1.1fr, 1fr),
-    inset: 3.5pt,
+    inset: 3pt,
     align: (left, center, center),
     stroke: 0.5pt + gray,
     fill: (x, y) => if y == 0 { gray.lighten(80%) },
