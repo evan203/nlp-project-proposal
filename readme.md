@@ -297,6 +297,10 @@ uv run python tools/chat.py \
   --model_path methods/dim/pipeline/runs/Llama-3.1-8B-Instruct/modified_model
 ```
 
+## Activation Comparison Experiments
+
+Contained in `code/act-comp.ipynb`
+
 ## Reference Papers
 
 | Paper | Key method | Location |
