@@ -317,6 +317,22 @@ we derive a small cone-like basis from high-norm DIM mean-difference candidates;
 with trained RCO artifacts, the same script can compare DIM, RDO, RepInd, and
 cone basis vectors directly.
 
+== Experiment
+
+=== Benchmark Compliance
+
+We evaluate each model (base and ablated) using three compliance evaluation metrics
+
+- JailbreakBench ASR #cite("jailbreakbench"): proportion of 100 harmful prompts which the model fails to refuse to answer.
+- Base Compliance: proportion of 100 harmless prompts from Alpaca #cite("alpaca") which the model does not refuse to answer.
+- Perplexity: next-token NLL on Pile #cite("thepile") and Alpaca #cite("alpaca").
+
+=== Method Geometry Comparison 
+
+- Cross-method MSO: MSO per layer and weight type between DIM-vs-ActSVD and RCO-vs-ActSVD
+- Direction cosine simliarity: cosine similarity in activations between DIM and RCO
+- Safety-Utility MSO: Each method's direction projected onto utility PCA
+
 = Current Implementation Status
 
 The current codebase has working DIM and ActSVD runs for LLaMA-3.1-Instruct,
