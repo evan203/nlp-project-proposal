@@ -4,6 +4,8 @@ Course project for COMP SCI 639 (Deep Learning for NLP). We compare three
 methods for removing refusal behavior from Llama-3.1-8B-Instruct and ask
 whether they identify the same underlying refusal mechanism.
 
+[Read the final report here.](https://evan203.github.io/nlp-project-proposal/main/report.pdf)
+
 ## Research Questions
 
 1. **Cross-method agreement**: Do DIM, ActSVD, and RCO converge on the same
@@ -258,6 +260,7 @@ Expected outputs:
 | Prompt-attack probe | `scripts/run_probe_attack_types.sh` | `code/results/probe_attack_types/results.json`, probe figure PNGs |
 
 ### 4. Activation Comparison
+
 To run the activation comparison experiment, use `notebooks/activation_comparison.ipynb`.
 
 ### 5. Figures and Report
